@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS docs(path TEXT PRIMARY KEY, col TEXT NOT NULL, id TEX
 CREATE INDEX IF NOT EXISTS docs_col ON docs(col);
 CREATE TABLE IF NOT EXISTS uploads(id TEXT PRIMARY KEY, uid TEXT, type TEXT, size INTEGER, created TEXT);
 CREATE TABLE IF NOT EXISTS audit(at TEXT, uid TEXT, action TEXT, target TEXT, meta TEXT);`);
+try { db.exec("ALTER TABLE users ADD COLUMN role TEXT"); } catch (_) { /* колонка уже есть */ }
+const ROLES = ["couple", "vendor"];
 
 const nowIso = () => new Date().toISOString();
 const rid = (n = 16) => crypto.randomBytes(n).toString("hex");
@@ -44,8 +46,16 @@ function cookieHeader(t, maxAge) { return `sd_session=${t}; Path=/; HttpOnly; Sa
 function readCookie(req, name) { const m = (req.headers.cookie || "").match(new RegExp("(?:^|;\\s*)" + name + "=([^;]+)")); return m ? m[1] : ""; }
 function currentUser(req) { const t = readCookie(req, "sd_session"); if (!t) return null;
   const s = db.prepare("SELECT * FROM sessions WHERE token=?").get(t); if (!s || s.expires < Date.now()) return null;
-  const u = db.prepare("SELECT id,email,disabled FROM users WHERE id=?").get(s.uid); if (!u || u.disabled) return null;
-  return { id: u.id, email: u.email, isAdmin: ADMINS.includes(u.email.toLowerCase()), token: t }; }
+  const u = db.prepare("SELECT id,email,disabled,role FROM users WHERE id=?").get(s.uid); if (!u || u.disabled) return null;
+  return { id: u.id, email: u.email, isAdmin: ADMINS.includes(u.email.toLowerCase()), role: u.role || inferRole(u.id), token: t }; }
+/* Роль аккаунта: пара или подрядчик. У старых аккаунтов без роли определяем по данным и запоминаем. */
+function inferRole(uid) {
+  let role = null;
+  if (getDoc("vendors/" + uid) || listCol("vendors").some(v => v.data && v.data.owner === uid)) role = "vendor";
+  else if (getDoc("cards/" + uid) || getDoc("requests/" + uid)) role = "couple";
+  if (role) db.prepare("UPDATE users SET role=? WHERE id=? AND role IS NULL").run(role, uid);
+  return role; }
+const pubUser = u => ({ id: u.id, email: u.email, isAdmin: ADMINS.includes(String(u.email).toLowerCase()), role: u.role || null });
 
 /* ---------- ограничение частоты ---------- */
 const buckets = new Map();
@@ -65,7 +75,7 @@ const itemsOf = d => (d && Array.isArray(d.items)) ? d.items : [];
 /* ---------- контекст пользователя ---------- */
 function ctxFor(user) { if (!user) return { uid: null, isAdmin: false, vendorIds: new Set(), vendorCats: new Set() };
   const vs = listCol("vendors").filter(v => v.id === user.id || (v.data && v.data.owner === user.id));
-  return { uid: user.id, email: user.email, isAdmin: user.isAdmin, vendorIds: new Set(vs.map(v => v.id)), vendorCats: new Set(vs.map(v => v.data.cat)) }; }
+  return { uid: user.id, email: user.email, isAdmin: user.isAdmin, role: user.role, vendorIds: new Set(vs.map(v => v.id)), vendorCats: new Set(vs.map(v => v.data.cat)) }; }
 function allRequests() { const out = []; for (const d of listCol("requests")) for (const r of itemsOf(d.data)) out.push({ ...r, coupleUid: d.id }); return out; }
 function findRequest(id) { return allRequests().find(r => r.id === id) || null; }
 function reqStatus(r) { if (r.status === "open" && r.deadlineAt && Date.now() > Date.parse(r.deadlineAt)) return "expired"; return r.status; }
@@ -113,6 +123,9 @@ function validateWrite(segs, data, prev, ctx) {
   if (data !== null && (typeof data !== "object" || Array.isArray(data))) return "shape";
   if (JSON.stringify(data || {}).length > 256 * 1024) return "too_large";
   if (ctx.isAdmin) return null;
+  // разделение ролей: подрядчик ведёт карточку, отмечает карты и отвечает на заявки; пара оформляет карту и размещает заявки
+  const need = { vendors: "vendor", offers: "vendor", redemptions: "vendor", cards: "couple", requests: "couple", complaints: "couple" }[top];
+  if (need && ctx.role !== need) return need === "vendor" ? "role_vendor_only" : "role_couple_only";
   if (top === "data" && segs[1] === "users") return segs[2] === ctx.uid && segs.length === 4 ? null : "forbidden";
   if (top === "vendors") { if (segs.length !== 2) return "forbidden";
     if (id !== ctx.uid && !(prev && prev.owner === ctx.uid)) return "forbidden";
@@ -209,24 +222,30 @@ async function api(req, res, url) {
   if (m !== "GET" && req.headers["x-sd"] !== "1") return err(res, 403, "csrf", "Обновите страницу и повторите");
   if (m !== "GET" && limited("w:" + (user ? user.id : ip), 120, 6e4)) return err(res, 429, "resource_exhausted", "Слишком много действий подряд. Подождите минуту.");
 
-  if (route === "/api/me" && m === "GET") return send(res, 200, { user: user ? { id: user.id, email: user.email, isAdmin: user.isAdmin } : null });
+  if (route === "/api/me" && m === "GET") return send(res, 200, { user: user ? { id: user.id, email: user.email, isAdmin: user.isAdmin, role: user.role } : null });
+  if (route === "/api/me/role" && m === "POST") { if (!user) return err(res, 401, "auth");
+    const b = await readJson(req); const role = String(b && b.role || "");
+    if (!ROLES.includes(role)) return err(res, 400, "invalid_argument", "Выберите роль");
+    if (user.role) return err(res, 409, "exists", "Роль уже выбрана. Сменить её может организатор.");
+    db.prepare("UPDATE users SET role=? WHERE id=?").run(role, user.id); audit(user.id, "role_set", role); return send(res, 200, { ok: true, role }); }
   if (route === "/api/auth/register" && m === "POST") {
     if (limited("reg:" + ip, 10, 36e5)) return err(res, 429, "resource_exhausted", "Слишком много регистраций с этого адреса. Попробуйте позже.");
     const b = await readJson(req); const email = String(b && b.email || "").trim().toLowerCase(); const pass = String(b && b.password || "");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 120) return err(res, 400, "invalid_argument", "Проверьте email");
     if (pass.length < 8 || pass.length > 200) return err(res, 400, "invalid_argument", "Пароль должен быть не короче 8 символов");
     if (!b.consent) return err(res, 400, "invalid_argument", "Нужно согласие на обработку персональных данных");
+    const role = String(b.role || ""); if (!ROLES.includes(role)) return err(res, 400, "invalid_argument", "Выберите, кто вы: пара или подрядчик");
     if (db.prepare("SELECT 1 FROM users WHERE email=?").get(email)) return err(res, 409, "exists", "Такой email уже зарегистрирован. Войдите или попросите организатора сбросить пароль.");
-    const id = uidNew(); db.prepare("INSERT INTO users(id,email,pass,created,consent) VALUES(?,?,?,?,?)").run(id, email, hashPass(pass), nowIso(), nowIso());
-    audit(id, "register", email); const t = newSession(id);
-    return send(res, 200, { user: { id, email, isAdmin: ADMINS.includes(email) } }, { "Set-Cookie": cookieHeader(t, SESSION_DAYS * 86400) }); }
+    const id = uidNew(); db.prepare("INSERT INTO users(id,email,pass,created,consent,role) VALUES(?,?,?,?,?,?)").run(id, email, hashPass(pass), nowIso(), nowIso(), role);
+    audit(id, "register", email, { role }); const t = newSession(id);
+    return send(res, 200, { user: pubUser({ id, email, role }) }, { "Set-Cookie": cookieHeader(t, SESSION_DAYS * 86400) }); }
   if (route === "/api/auth/login" && m === "POST") {
     const b = await readJson(req); const email = String(b && b.email || "").trim().toLowerCase();
     if (limited("login:" + ip, 20, 9e5) || limited("login:" + email, 8, 9e5)) return err(res, 429, "resource_exhausted", "Слишком много попыток входа. Подождите 15 минут.");
     const u = db.prepare("SELECT * FROM users WHERE email=?").get(email);
     if (!u || u.disabled || !checkPass(String(b.password || ""), u.pass)) return err(res, 401, "auth", "Неверный email или пароль");
     const t = newSession(u.id); audit(u.id, "login", email);
-    return send(res, 200, { user: { id: u.id, email: u.email, isAdmin: ADMINS.includes(u.email) } }, { "Set-Cookie": cookieHeader(t, SESSION_DAYS * 86400) }); }
+    return send(res, 200, { user: pubUser({ ...u, role: u.role || inferRole(u.id) }) }, { "Set-Cookie": cookieHeader(t, SESSION_DAYS * 86400) }); }
   if (route === "/api/auth/logout" && m === "POST") { if (user) db.prepare("DELETE FROM sessions WHERE token=?").run(user.token); return send(res, 200, { ok: true }, { "Set-Cookie": cookieHeader("", 0) }); }
   if (route === "/api/auth/password" && m === "POST") { if (!user) return err(res, 401, "auth");
     const b = await readJson(req); const u = db.prepare("SELECT pass FROM users WHERE id=?").get(user.id);
@@ -273,7 +292,7 @@ async function api(req, res, url) {
 
   /* --- организатор --- */
   if (route.startsWith("/api/admin/")) { if (!ctx.isAdmin) return err(res, 403, "forbidden");
-    if (route === "/api/admin/users" && m === "GET") return send(res, 200, { users: db.prepare("SELECT id,email,created,disabled FROM users ORDER BY created DESC LIMIT 500").all() });
+    if (route === "/api/admin/users" && m === "GET") return send(res, 200, { users: db.prepare("SELECT id,email,created,disabled,role FROM users ORDER BY created DESC LIMIT 500").all().map(u => ({ ...u, role: u.role || (u.disabled ? null : inferRole(u.id)) })) });
     if (route === "/api/admin/cards" && m === "GET") { // реестр дисконтных карт
       const blocked = new Set(listCol("blocks").map(b => b.id));
       const uses = new Map(); for (const d of listCol("redemptions")) for (const x of itemsOf(d.data)) { const u = uses.get(x.card) || { n: 0, sum: 0, last: "", vendors: new Set() }; u.n++; u.sum += +x.amount || 0; if (String(x.at) > u.last) u.last = x.at; u.vendors.add(x.vendorName || x.vendorId); uses.set(x.card, u); }
@@ -287,6 +306,10 @@ async function api(req, res, url) {
       if (!u) return err(res, 404, "not_found", "Пользователь с таким email не найден");
       const tmp = crypto.randomBytes(6).toString("base64url"); db.prepare("UPDATE users SET pass=? WHERE id=?").run(hashPass(tmp), u.id); db.prepare("DELETE FROM sessions WHERE uid=?").run(u.id);
       audit(ctx.uid, "reset_password", u.id); return send(res, 200, { password: tmp }); }
+    if (route === "/api/admin/set-role" && m === "POST") { const u = db.prepare("SELECT id FROM users WHERE email=?").get(String(b.email || "").trim().toLowerCase());
+      if (!u) return err(res, 404, "not_found", "Пользователь с таким email не найден");
+      if (!ROLES.includes(b.role)) return err(res, 400, "invalid_argument", "Неизвестная роль");
+      db.prepare("UPDATE users SET role=? WHERE id=?").run(b.role, u.id); audit(ctx.uid, "set_role", u.id, { role: b.role }); return send(res, 200, { ok: true }); }
     if (route === "/api/admin/assign-vendor" && m === "POST") { const u = db.prepare("SELECT id FROM users WHERE email=?").get(String(b.email || "").trim().toLowerCase());
       if (!u) return err(res, 404, "not_found", "Пользователь с таким email не найден");
       const v = getDoc("vendors/" + b.vendorId); if (!v) return err(res, 404, "not_found", "Карточка не найдена");
@@ -296,6 +319,7 @@ async function api(req, res, url) {
         // ссылки на старый id в заявках, откликах и отметках
         for (const col of ["requests", "offers", "messages", "redemptions"]) for (const d of listCol(col)) { const s = JSON.stringify(d.data); if (s.includes(b.vendorId)) setDoc(col + "/" + d.id, JSON.parse(s.split('"' + b.vendorId).join('"' + u.id)), ctx.uid); } }
       else setDoc("vendors/" + u.id, nv, ctx.uid);
+      db.prepare("UPDATE users SET role='vendor' WHERE id=?").run(u.id);
       audit(ctx.uid, "assign_vendor", b.vendorId, { to: u.id }); return send(res, 200, { ok: true, vendorId: u.id }); }
     return err(res, 404, "not_found"); }
   return err(res, 404, "not_found");

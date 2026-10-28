@@ -27,7 +27,7 @@ addEventListener("hashchange",()=>{if(SUBS.size)refreshSubs()});
 let ME=null;
 
 function authHtml(){return`<div class="auth">
-  <div class="auth-intro"><h3>Вход в личный кабинет</h3><p>Один аккаунт для пар и партнёров. Пара оформляет карту и размещает заявки, партнёр ведёт карточку в каталоге и отвечает на заявки.</p></div>
+  <div class="auth-intro"><h3>Вход в личный кабинет</h3><p>При регистрации выберите, кто вы. От этого зависит, что будет в кабинете: пара оформляет дисконтную карту и размещает заявки, подрядчик ведёт карточку в каталоге, отвечает на заявки и проверяет карты пар.</p></div>
   <div class="auth-forms">
   <form class="f panel" id="login-f" novalidate><h3>Войти</h3>
     <label for="lg-email">Email<input id="lg-email" type="email" autocomplete="email" required></label>
@@ -35,6 +35,7 @@ function authHtml(){return`<div class="auth">
     <div class="row"><button class="btn" type="submit">Войти</button><span class="msg err" id="lg-msg"></span></div>
     <p class="note" style="margin:0">Забыли пароль? Напишите организатору <a href="https://vk.ru/club109353383" target="_blank" rel="noopener">во ВКонтакте</a>, он выдаст временный.</p></form>
   <form class="f panel" id="reg-f" novalidate><h3>Регистрация</h3>
+    <fieldset class="role-pick"><legend>Кто вы?</legend>${rolePickHtml("rg-role")}</fieldset>
     <label for="rg-email">Email<input id="rg-email" type="email" autocomplete="email" required></label>
     <div class="g2"><label for="rg-pass">Пароль <span class="hint">от 8 символов</span><input id="rg-pass" type="password" autocomplete="new-password" required></label>
     <label for="rg-pass2">Повторите пароль<input id="rg-pass2" type="password" autocomplete="new-password" required></label></div>
@@ -42,13 +43,27 @@ function authHtml(){return`<div class="auth">
     <div class="row"><button class="btn" type="submit">Зарегистрироваться</button><span class="msg err" id="rg-msg"></span></div></form>
   </div></div>`}
 function bindAuth(){const L=$("#login-f"),R=$("#reg-f");if(!L)return;
+  const pref=sessGet("sd-role-pref");if(pref){const i=document.querySelector(`input[name="rg-role"][value="${pref}"]`);if(i)i.checked=true}
   L.onsubmit=async e=>{e.preventDefault();$("#lg-msg").textContent="";try{await apiFetch("/api/auth/login",{method:"POST",body:JSON.stringify({email:$("#lg-email").value,password:$("#lg-pass").value})});location.hash="cabinet";location.reload()}catch(err){$("#lg-msg").textContent=err.message||"Не удалось войти"}};
   R.onsubmit=async e=>{e.preventDefault();const m=$("#rg-msg");m.textContent="";
     if($("#rg-pass").value!==$("#rg-pass2").value){m.textContent="Пароли не совпадают";return}
+    if(!pickedRole("rg-role")){m.textContent="Выберите, кто вы: пара или подрядчик";return}
     if(!$("#rg-consent").checked){m.textContent="Отметьте согласие на обработку персональных данных";return}
-    try{await apiFetch("/api/auth/register",{method:"POST",body:JSON.stringify({email:$("#rg-email").value,password:$("#rg-pass").value,consent:true})});location.hash="cabinet";location.reload()}catch(err){m.textContent=err.message||"Не удалось зарегистрироваться"}}}
+    try{await apiFetch("/api/auth/register",{method:"POST",body:JSON.stringify({email:$("#rg-email").value,password:$("#rg-pass").value,consent:true,role:pickedRole("rg-role")})});location.hash="cabinet";location.reload()}catch(err){m.textContent=err.message||"Не удалось зарегистрироваться"}}}
+/* ---------- роли: пара или подрядчик ---------- */
+function rolePickHtml(name){return`<label class="role-opt"><input type="radio" name="${name}" value="couple"><span><b>Мы пара</b><small>Дисконтная карта, заявки подрядчикам, предложения и переписка</small></span></label>
+  <label class="role-opt"><input type="radio" name="${name}" value="vendor"><span><b>Я подрядчик</b><small>Карточка в каталоге, заявки пар и отклики, проверка карт</small></span></label>`}
+const pickedRole=name=>{const i=document.querySelector(`input[name="${name}"]:checked`);return i?i.value:""};
+const ROLE_NAME={couple:"пара",vendor:"подрядчик"};
+function roleChooser(){$("#cab-on").hidden=true;$("#cab-off").hidden=false;$("#cab-off").classList.remove("empty");
+  $("#cab-lead").textContent="Выберите, кто вы. От этого зависит, что будет в вашем кабинете.";
+  $("#cab-off").innerHTML=`<form class="f panel" id="role-f" novalidate style="max-width:640px"><h3>Кто вы?</h3><fieldset class="role-pick">${rolePickHtml("cr-role")}</fieldset>
+    <p class="note" style="margin:0">Роль выбирается один раз. Если ошиблись, напишите организатору, он поменяет.</p>
+    <div class="row"><button class="btn" type="submit">Продолжить</button><span class="msg err" id="cr-msg"></span></div></form>`;
+  $("#role-f").onsubmit=async e=>{e.preventDefault();const r=pickedRole("cr-role");if(!r){$("#cr-msg").textContent="Выберите вариант";return}
+    try{await apiFetch("/api/me/role",{method:"POST",body:JSON.stringify({role:r})});location.hash="cabinet";location.reload()}catch(err){$("#cr-msg").textContent=err.message||"Не удалось сохранить"}}}
 function accountBar(){if(!ME||$("#acct"))return;
-  $("#cab-lead").insertAdjacentHTML("afterend",`<div class="acct" id="acct"><span>Вы вошли как <b>${esc(ME.email)}</b>${ME.isAdmin?" · организатор":""}</span>
+  $("#cab-lead").insertAdjacentHTML("afterend",`<div class="acct" id="acct"><span>Вы вошли как <b>${esc(ME.email)}</b> · ${ME.isAdmin?"организатор":ROLE_NAME[ME.role]||"роль не выбрана"}</span>
     <details><summary>Аккаунт</summary><form class="f" id="pw-f" novalidate><label for="pw-old">Текущий пароль<input id="pw-old" type="password" autocomplete="current-password"></label><label for="pw-new">Новый пароль<input id="pw-new" type="password" autocomplete="new-password"></label><button class="btn small" type="submit">Сменить пароль</button></form>
     <form class="f" id="del-f" novalidate><label for="del-pass">Удалить аккаунт и личные данные <span class="hint">введите пароль</span><input id="del-pass" type="password" autocomplete="current-password"></label><button class="btn danger small" type="submit">Удалить аккаунт</button></form></details>
     <button class="btn ghost small" type="button" id="logout">Выйти</button></div>`);
@@ -60,12 +75,14 @@ function adminTools(){if(!ME||!ME.isAdmin||$("#adm-users"))return;
   $("#t-admin").insertAdjacentHTML("beforeend",`<div class="panel" id="adm-users" style="margin-top:20px"><h3>Пользователи</h3>
    <form class="f" id="rp-f" novalidate style="grid-template-columns:minmax(0,1fr) auto;align-items:end"><label for="rp-email">Сбросить пароль (выдаст временный)<input id="rp-email" type="email"></label><button class="btn ghost" type="submit">Сбросить</button></form>
    <p class="msg ok" id="rp-out"></p>
+   <form class="f" id="sr-f" novalidate style="grid-template-columns:minmax(0,1fr) auto auto;align-items:end"><label for="sr-email">Сменить роль пользователя<input id="sr-email" type="email" placeholder="email"></label><select id="sr-role" aria-label="Роль"><option value="couple">Пара</option><option value="vendor">Подрядчик</option></select><button class="btn ghost" type="submit">Сменить</button></form>
    <form class="f" id="as-f" novalidate><label for="as-vendor">Передать карточку каталога партнёру<select id="as-vendor"></select></label><label for="as-email">Email зарегистрированного партнёра<input id="as-email" type="email"></label><div class="row"><button class="btn ghost" type="submit">Передать</button></div></form>
    <details><summary id="us-sum">Зарегистрированы</summary><div class="list" id="us-list"></div></details></div>`);
   const fillV=()=>{$("#as-vendor").innerHTML=liveVendors.map(v=>`<option value="${esc(v.id)}">${esc(v.name)}${v.demo?" (демо)":""}</option>`).join("")};fillV();setInterval(fillV,20000);
   $("#rp-f").onsubmit=async e=>{e.preventDefault();try{const j=await apiFetch("/api/admin/reset-password",{method:"POST",body:JSON.stringify({email:$("#rp-email").value})});$("#rp-out").textContent="Временный пароль: "+j.password+" — передайте его пользователю, он сменит пароль в разделе «Аккаунт»."}catch(err){$("#rp-out").textContent=err.message||"Не удалось"}};
+  $("#sr-f").onsubmit=async e=>{e.preventDefault();try{await apiFetch("/api/admin/set-role",{method:"POST",body:JSON.stringify({email:$("#sr-email").value,role:$("#sr-role").value})});toast("Роль изменена. Пользователю нужно обновить страницу.");loadUsers()}catch(err){toast(err.message||"Не удалось сменить роль")}};
   $("#as-f").onsubmit=async e=>{e.preventDefault();try{await apiFetch("/api/admin/assign-vendor",{method:"POST",body:JSON.stringify({vendorId:$("#as-vendor").value,email:$("#as-email").value})});toast("Карточка передана партнёру");refreshSubs()}catch(err){toast(err.message||"Не удалось передать")}};
-  apiFetch("/api/admin/users").then(j=>{$("#us-sum").textContent="Зарегистрированы: "+j.users.filter(u=>!u.disabled).length;$("#us-list").innerHTML=j.users.filter(u=>!u.disabled).map(u=>`<div class="rl"><b>${esc(u.email)}</b><span class="amt">${fmtDate(u.created)}</span></div>`).join("")}).catch(()=>{});
+  const loadUsers=()=>apiFetch("/api/admin/users").then(j=>{const l=j.users.filter(u=>!u.disabled),n=r=>l.filter(u=>u.role===r).length;$("#us-sum").textContent=`Зарегистрированы: ${l.length} (пар ${n("couple")}, подрядчиков ${n("vendor")})`;$("#us-list").innerHTML=l.map(u=>`<div class="rl"><b>${esc(u.email)}</b><span class="amt">${ROLE_NAME[u.role]||"без роли"} · ${fmtDate(u.created)}</span></div>`).join("")}).catch(()=>{});loadUsers();
   cardsRegistry()}
 
 /* ---------- Реестр дисконтных карт (только организатор) ---------- */
@@ -101,7 +118,8 @@ async function startServer(){
   try{ME=(await apiFetch("/api/me")).user}catch(_){ME=null}
   DB.collection("vendors").onSnapshot(s=>{liveVendors=s.docs.map(d=>({id:d.id,...d.data()}));liveLoaded=true;renderAll()});
   if(!ME){$("#cab-off").innerHTML=authHtml();$("#cab-off").classList.remove("empty");bindAuth();cabState();renderPhotos();route();return}
-  UID=ME.id;IS_OWNER=!!ME.isAdmin;CAN_WRITE=true;
+  UID=ME.id;IS_OWNER=!!ME.isAdmin;CAN_WRITE=true;ROLE=IS_OWNER?null:ME.role||"none";
+  if(ROLE==="none"){accountBar();roleChooser();route();return}
   USER={id:async()=>ME.id,isOwner:async()=>!!ME.isAdmin,canEdit:async()=>!!ME.isAdmin,can:async()=>true};
   ASSETS={async upload(file){const r=await fetch("/api/upload",{method:"POST",credentials:"same-origin",headers:{"Content-Type":file.type||"application/octet-stream","X-SD":"1"},body:file});const j=await r.json().catch(()=>({}));if(!r.ok)throw{code:j.code||"unavailable",message:j.error||""};return j}};
   $("#tab-admin").hidden=!IS_OWNER;cabState();renderPhotos();accountBar();adminTools();
