@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/bin/sh
+[ -n "$BASH_VERSION" ] || exec /bin/bash "$0" "$@"
+exec > /var/log/skazalada-setup.log 2>&1
 # Первичная настройка сервера #СказалаДа! (Ubuntu 24.04). Вставляется в поле Cloud-init при создании сервера.
 set -euxo pipefail
 DOMAIN="xn----7sbaabxrwm9c.xn--p1ai"          # сказала-да.рф
