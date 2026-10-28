@@ -274,6 +274,14 @@ async function api(req, res, url) {
   /* --- организатор --- */
   if (route.startsWith("/api/admin/")) { if (!ctx.isAdmin) return err(res, 403, "forbidden");
     if (route === "/api/admin/users" && m === "GET") return send(res, 200, { users: db.prepare("SELECT id,email,created,disabled FROM users ORDER BY created DESC LIMIT 500").all() });
+    if (route === "/api/admin/cards" && m === "GET") { // реестр дисконтных карт
+      const blocked = new Set(listCol("blocks").map(b => b.id));
+      const uses = new Map(); for (const d of listCol("redemptions")) for (const x of itemsOf(d.data)) { const u = uses.get(x.card) || { n: 0, sum: 0, last: "", vendors: new Set() }; u.n++; u.sum += +x.amount || 0; if (String(x.at) > u.last) u.last = x.at; u.vendors.add(x.vendorName || x.vendorId); uses.set(x.card, u); }
+      const cards = listCol("cards").map(d => { const p = getDoc("data/users/" + d.id + "/profile") || {}; const u = db.prepare("SELECT email,disabled FROM users WHERE id=?").get(d.id) || {}; const us = uses.get(d.data.num) || { n: 0, sum: 0, last: "", vendors: new Set() };
+        return { uid: d.id, num: d.data.num, names: d.data.names || p.names || "", date: d.data.date || p.date || "", createdAt: d.data.createdAt || "", phone: p.phone || "", city: p.city || "", email: u.disabled ? "" : (u.email || ""), deleted: !!u.disabled,
+          blocked: blocked.has(d.data.num), uses: us.n, sum: us.sum, lastUse: us.last, vendors: [...us.vendors] }; })
+        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+      audit(ctx.uid, "cards_registry_view"); return send(res, 200, { cards }); }
     const b = await readJson(req) || {};
     if (route === "/api/admin/reset-password" && m === "POST") { const u = db.prepare("SELECT id FROM users WHERE email=?").get(String(b.email || "").trim().toLowerCase());
       if (!u) return err(res, 404, "not_found", "Пользователь с таким email не найден");

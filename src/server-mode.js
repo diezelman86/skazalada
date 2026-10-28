@@ -65,7 +65,34 @@ function adminTools(){if(!ME||!ME.isAdmin||$("#adm-users"))return;
   const fillV=()=>{$("#as-vendor").innerHTML=liveVendors.map(v=>`<option value="${esc(v.id)}">${esc(v.name)}${v.demo?" (демо)":""}</option>`).join("")};fillV();setInterval(fillV,20000);
   $("#rp-f").onsubmit=async e=>{e.preventDefault();try{const j=await apiFetch("/api/admin/reset-password",{method:"POST",body:JSON.stringify({email:$("#rp-email").value})});$("#rp-out").textContent="Временный пароль: "+j.password+" — передайте его пользователю, он сменит пароль в разделе «Аккаунт»."}catch(err){$("#rp-out").textContent=err.message||"Не удалось"}};
   $("#as-f").onsubmit=async e=>{e.preventDefault();try{await apiFetch("/api/admin/assign-vendor",{method:"POST",body:JSON.stringify({vendorId:$("#as-vendor").value,email:$("#as-email").value})});toast("Карточка передана партнёру");refreshSubs()}catch(err){toast(err.message||"Не удалось передать")}};
-  apiFetch("/api/admin/users").then(j=>{$("#us-sum").textContent="Зарегистрированы: "+j.users.filter(u=>!u.disabled).length;$("#us-list").innerHTML=j.users.filter(u=>!u.disabled).map(u=>`<div class="rl"><b>${esc(u.email)}</b><span class="amt">${fmtDate(u.created)}</span></div>`).join("")}).catch(()=>{})}
+  apiFetch("/api/admin/users").then(j=>{$("#us-sum").textContent="Зарегистрированы: "+j.users.filter(u=>!u.disabled).length;$("#us-list").innerHTML=j.users.filter(u=>!u.disabled).map(u=>`<div class="rl"><b>${esc(u.email)}</b><span class="amt">${fmtDate(u.created)}</span></div>`).join("")}).catch(()=>{});
+  cardsRegistry()}
+
+/* ---------- Реестр дисконтных карт (только организатор) ---------- */
+let REG=[];
+function cardsRegistry(){
+  $("#t-admin").insertAdjacentHTML("afterbegin",`<div class="panel reg" id="reg" style="margin-bottom:20px">
+   <div class="row" style="justify-content:space-between"><h3>Реестр карт <span class="note" id="reg-count"></span></h3>
+   <div class="row"><button class="btn ghost small" type="button" id="reg-refresh">Обновить</button><button class="btn small" type="button" id="reg-csv">Выгрузить в Excel</button></div></div>
+   <div class="row reg-tools"><input id="reg-q" type="search" placeholder="Поиск: номер, имена, телефон, email" aria-label="Поиск по реестру карт">
+   <select id="reg-f" aria-label="Фильтр"><option value="all">Все карты</option><option value="used">Использованные</option><option value="unused">Ни разу не использованы</option><option value="blocked">Заблокированные</option></select></div>
+   <div class="tbl"><table><thead><tr><th>Номер</th><th>Пара</th><th>Дата свадьбы</th><th>Телефон</th><th>Email</th><th>Оформлена</th><th class="n">Использований</th><th class="n">Сумма, ₽</th><th>Последнее</th><th>Статус</th></tr></thead><tbody id="reg-body"><tr><td colspan="10" class="note">Загружаем реестр…</td></tr></tbody></table></div>
+   <p class="note" style="margin:0">Реестр видите только вы. Телефоны и почты — персональные данные: не пересылайте выгрузку третьим лицам.</p></div>`);
+  const load=()=>apiFetch("/api/admin/cards").then(j=>{REG=j.cards;drawReg()}).catch(e=>{$("#reg-body").innerHTML=`<tr><td colspan="10" class="note">${esc(e.message||"Не удалось загрузить реестр")}</td></tr>`});
+  $("#reg-refresh").onclick=load;$("#reg-q").oninput=drawReg;$("#reg-f").onchange=drawReg;
+  $("#reg-csv").onclick=()=>{const rows=regFiltered();if(!rows.length){toast("Нет карт для выгрузки");return}
+    const head=["Номер карты","Пара","Дата свадьбы","Телефон","Email","Город","Оформлена","Использований","Сумма заказов, ₽","Последнее использование","Партнёры","Статус"];
+    const q=v=>{const s=String(v??"");return/[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+    const csv="﻿"+[head,...rows.map(c=>[c.num,c.names,c.date?fmtDate(c.date):"",c.phone,c.email,c.city,fmtDate(c.createdAt),c.uses,c.sum,c.lastUse?fmtDate(c.lastUse):"",c.vendors.join(", "),regStatus(c)])].map(r=>r.map(q).join(";")).join("\r\n");
+    const u=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})),a=document.createElement("a");a.href=u;a.download="reestr-kart-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000)};
+  load();
+}
+const regStatus=c=>c.deleted?"аккаунт удалён":c.blocked?"заблокирована":"действует";
+function regFiltered(){const q=($("#reg-q").value||"").trim().toLowerCase(),f=$("#reg-f").value;
+  return REG.filter(c=>(f==="all"||(f==="used"&&c.uses)||(f==="unused"&&!c.uses)||(f==="blocked"&&c.blocked))&&(!q||[c.num,c.names,c.phone,c.email,c.city].join(" ").toLowerCase().includes(q)))}
+function drawReg(){const l=regFiltered();$("#reg-count").textContent=REG.length?`${l.length} из ${REG.length}`:"";
+  $("#reg-body").innerHTML=l.length?l.map(c=>`<tr><td><a href="#check-${esc(c.num)}">${esc(c.num)}</a></td><td>${esc(c.names||"—")}</td><td>${c.date?fmtDate(c.date):"—"}</td><td>${esc(c.phone||"—")}</td><td>${esc(c.email||"—")}</td><td>${fmtDate(c.createdAt)}</td><td class="n">${c.uses}</td><td class="n">${c.sum?fmtRub(c.sum):"—"}</td><td>${c.lastUse?fmtDate(c.lastUse):"—"}</td><td><span class="st st-${c.blocked||c.deleted?"bad":"ok"}">${regStatus(c)}</span></td></tr>`).join("")
+   :`<tr><td colspan="10" class="note">${REG.length?"Ничего не найдено. Измените поиск или фильтр.":"Карт пока нет. Они появятся, когда пары оформят карту в кабинете."}</td></tr>`}
 
 async function startServer(){
   LIVE=true;DB=SDB;setLiveLabels();
