@@ -1,0 +1,365 @@
+{
+ "docs": {
+  "vendors/demo-venue-1": {
+   "about": "Усадьба в 40 минутах от города: каменный дом, светлый шатёр на 120 гостей и площадка для выездной регистрации у пруда. Своя кухня с авторским банкетным меню, можно привезти свой алкоголь без пробкового сбора.\n\nНа территории есть гостевой дом на 16 мест, поэтому праздник можно продолжить на следующий день.",
+   "cat": "venue",
+   "contacts": {
+    "addr": "Загородная усадьба, 40 минут от города",
+    "phone": "+7 900 000-00-01",
+    "site": "",
+    "tg": "",
+    "vk": "vk.com/berezovy_dvor_demo"
+   },
+   "createdAt": "2026-10-27T14:30:00.000Z",
+   "demo": true,
+   "discount": {
+    "cond": "на банкетное меню",
+    "pct": 10
+   },
+   "name": "Усадьба «Берёзовый двор»",
+   "offer": {
+    "terms": "При бронировании субботы на июнь–август 2027",
+    "title": "Welcome-зона в подарок",
+    "until": "2027-03-31"
+   },
+   "owner": "",
+   "photos": [
+    "assets/venue.jpg",
+    "assets/decor.jpg"
+   ],
+   "price": "от 4 500 ₽ на гостя",
+   "promo": "SKAZALADA-VENUE",
+   "short": "Загородная площадка с шатром на 120 гостей и регистрацией у пруда",
+   "updatedAt": "2026-10-27T14:30:00.000Z",
+   "visible": true
+  },
+  "vendors/demo-photo-1": {
+   "about": "Снимаю свадьбы 9 лет. Работаю в репортажном стиле: почти не ставлю позы и ловлю настоящие эмоции. Обработка в тёплой плёночной манере.\n\nВ полный день входит сборы, прогулка, церемония и банкет. Готовые фото через 14 дней, 15 снимков-превью через 3 дня.",
+   "cat": "photo",
+   "contacts": {
+    "addr": "",
+    "phone": "+7 900 000-00-02",
+    "site": "",
+    "tg": "@svetlova_demo",
+    "vk": "vk.com/svetlova_photo_demo"
+   },
+   "createdAt": "2026-10-27T14:30:00.000Z",
+   "demo": true,
+   "discount": {
+    "cond": "на полный день съёмки",
+    "pct": 15
+   },
+   "name": "Мария Светлова",
+   "offer": {
+    "terms": "При бронировании до 31 декабря 2026",
+    "title": "Love story в подарок",
+    "until": "2026-12-31"
+   },
+   "owner": "",
+   "photos": [
+    "assets/photo.jpg",
+    "assets/wedding.jpg",
+    "assets/venue.jpg"
+   ],
+   "price": "от 40 000 ₽",
+   "promo": "SKAZALADA-PHOTO",
+   "short": "Репортажная съёмка, живые эмоции, плёночная обработка",
+   "updatedAt": "2026-10-27T14:30:00.000Z",
+   "visible": true
+  },
+  "vendors/demo-beauty-1": {
+   "about": "Создаём образы невест, которые держатся весь день. Выезжаем на сборы, работаем со стойкой косметикой. Пробный образ за 1–2 месяца до свадьбы.",
+   "cat": "beauty",
+   "contacts": {
+    "addr": "Центр города",
+    "phone": "+7 900 000-00-05",
+    "site": "",
+    "tg": "",
+    "vk": "vk.com/fata_pudra_demo"
+   },
+   "createdAt": "2026-10-27T14:30:00.000Z",
+   "demo": true,
+   "discount": {
+    "cond": "на пробный образ",
+    "pct": 20
+   },
+   "name": "Студия «Фата и пудра»",
+   "offer": {
+    "terms": "При заказе образа невесты на день свадьбы",
+    "title": "Образ мамы невесты −30%",
+    "until": ""
+   },
+   "owner": "",
+   "photos": [
+    "assets/beauty.jpg"
+   ],
+   "price": "от 12 000 ₽",
+   "promo": "SKAZALADA-BEAUTY",
+   "short": "Причёска и макияж невесты, пробный образ",
+   "updatedAt": "2026-10-27T14:30:00.000Z",
+   "visible": true
+  },
+  "vendors/demo-dance-1": {
+   "about": "Ставим вальс, танго или современный номер под вашу песню. Подходит даже тем, кто никогда не танцевал.",
+   "cat": "dance",
+   "contacts": {
+    "addr": "",
+    "phone": "+7 900 000-00-09",
+    "site": "",
+    "tg": "",
+    "vk": ""
+   },
+   "createdAt": "2026-10-27T14:30:00.000Z",
+   "demo": true,
+   "discount": {
+    "cond": "на постановку танца",
+    "pct": 20
+   },
+   "name": "Студия «Па-де-де»",
+   "offer": {
+    "terms": "",
+    "title": "",
+    "until": ""
+   },
+   "owner": "",
+   "photos": [
+    "assets/wedding.jpg"
+   ],
+   "price": "от 14 000 ₽",
+   "promo": "SKAZALADA-DANCE",
+   "short": "Постановка первого танца за 4–6 занятий",
+   "updatedAt": "2026-10-27T14:30:00.000Z",
+   "visible": true
+  },
+  "vendors/demo-decor-1": {
+   "about": "Сезонная флористика и декор. Делаем букет невесты, бутоньерки, оформление церемонии и банкета. Выезжаем на площадку, монтаж и демонтаж включены.",
+   "cat": "decor",
+   "contacts": {
+    "addr": "",
+    "phone": "",
+    "site": "",
+    "tg": "@peony_sage_demo",
+    "vk": "vk.com/peony_sage_demo"
+   },
+   "createdAt": "2026-10-27T14:30:00.000Z",
+   "demo": true,
+   "discount": {
+    "cond": "на оформление от 50 000 ₽",
+    "pct": 12
+   },
+   "name": "Флористы «Пион и шалфей»",
+   "offer": {
+    "terms": "",
+    "title": "Бутоньерка жениху",
+    "until": ""
+   },
+   "owner": "",
+   "photos": [
+    "assets/decor.jpg"
+   ],
+   "price": "букет от 6 000 ₽",
+   "promo": "SKAZALADA-DECOR",
+   "short": "Букет невесты, оформление зала, арки и стола молодожёнов",
+   "updatedAt": "2026-10-27T14:30:00.000Z",
+   "visible": true
+  },
+  "vendors/demo-dress-1": {
+   "about": "Более 200 моделей в салоне. Примерка по записи, бесплатная подгонка по фигуре. Есть платья для росписи и второго образа.",
+   "cat": "dress",
+   "contacts": {
+    "addr": "ТЦ в центре, 2 этаж",
+    "phone": "+7 900 000-00-06",
+    "site": "",
+    "tg": "",
+    "vk": "vk.com/white_cloud_demo"
+   },
+   "createdAt": "2026-10-27T14:30:00.000Z",
+   "demo": true,
+   "discount": {
+    "cond": "на платья новой коллекции",
+    "pct": 10
+   },
+   "name": "Салон «Белое облако»",
+   "offer": {
+    "terms": "При покупке платья от 80 000 ₽",
+    "title": "Фата в подарок",
+    "until": ""
+   },
+   "owner": "",
+   "photos": [
+    "assets/dress.jpg"
+   ],
+   "price": "от 45 000 ₽",
+   "promo": "SKAZALADA-DRESS",
+   "short": "Платья российских и европейских дизайнеров, подгонка в салоне",
+   "updatedAt": "2026-10-27T14:30:00.000Z",
+   "visible": true
+  },
+  "vendors/demo-host-1": {
+   "about": "Веду свадьбы 12 лет. Программу собираю под пару: никаких конкурсов, за которые стыдно. Работаю в паре с DJ, отвечаю за тайминг и подрядчиков на площадке.",
+   "cat": "host",
+   "contacts": {
+    "addr": "",
+    "phone": "+7 900 000-00-04",
+    "site": "",
+    "tg": "",
+    "vk": "vk.com/gromov_host_demo"
+   },
+   "createdAt": "2026-10-27T14:30:00.000Z",
+   "demo": true,
+   "discount": {
+    "cond": "на вечер от 5 часов",
+    "pct": 10
+   },
+   "name": "Алексей Громов",
+   "offer": {
+    "terms": "Если программа от 6 часов",
+    "title": "DJ-сет за полцены",
+    "until": ""
+   },
+   "owner": "",
+   "photos": [
+    "assets/host.jpg"
+   ],
+   "price": "от 45 000 ₽",
+   "promo": "SKAZALADA-HOST",
+   "short": "Ведущий без пошлых конкурсов, интеллигентный юмор",
+   "updatedAt": "2026-10-27T14:30:00.000Z",
+   "visible": true
+  },
+  "vendors/demo-video-1": {
+   "about": "Команда из двух операторов. Снимаем свадебный фильм на 15–20 минут и клип на 3 минуты для соцсетей. Съёмка с дрона включена в пакет.",
+   "cat": "video",
+   "contacts": {
+    "addr": "",
+    "phone": "",
+    "site": "https://example.com",
+    "tg": "",
+    "vk": "vk.com/long_shot_demo"
+   },
+   "createdAt": "2026-10-27T14:30:00.000Z",
+   "demo": true,
+   "discount": {
+    "cond": "на пакет «Фильм + клип»",
+    "pct": 12
+   },
+   "name": "Студия «Длинный план»",
+   "offer": {
+    "terms": "Для свадеб с понедельника по четверг",
+    "title": "Тизер за 48 часов",
+    "until": ""
+   },
+   "owner": "",
+   "photos": [
+    "assets/video.jpg"
+   ],
+   "price": "от 55 000 ₽",
+   "promo": "SKAZALADA-VIDEO",
+   "short": "Свадебный фильм, клип дня и съёмка с дрона",
+   "updatedAt": "2026-10-27T14:30:00.000Z",
+   "visible": true
+  },
+  "vendors/demo-cake-1": {
+   "about": "Торты на натуральных сливках, без мастики по желанию. Дегустация трёх начинок перед заказом. Доставка и сборка торта на площадке.",
+   "cat": "cake",
+   "contacts": {
+    "addr": "",
+    "phone": "+7 900 000-00-08",
+    "site": "",
+    "tg": "",
+    "vk": "vk.com/three_tiers_demo"
+   },
+   "createdAt": "2026-10-27T14:30:00.000Z",
+   "demo": true,
+   "discount": {
+    "cond": "на торт от 4 кг",
+    "pct": 10
+   },
+   "name": "Кондитерская «Три яруса»",
+   "offer": {
+    "terms": "По предварительной записи",
+    "title": "Дегустационный сет бесплатно",
+    "until": ""
+   },
+   "owner": "",
+   "photos": [
+    "assets/cake.jpg"
+   ],
+   "price": "от 3 200 ₽/кг",
+   "promo": "SKAZALADA-CAKE",
+   "short": "Свадебные торты и кенди-бар, дегустация",
+   "updatedAt": "2026-10-27T14:30:00.000Z",
+   "visible": true
+  },
+  "vendors/u_Zlis_mtcDgo1uN5IHoPDXg": {
+   "about": "Наша студия осуществляет услуги в сфере декора и флористики.",
+   "cat": "decor",
+   "contacts": {
+    "addr": "Нижний Новгород",
+    "phone": "+79040909499",
+    "site": "",
+    "tg": "deaedezd",
+    "vk": "vk.com/aquarelle_nn"
+   },
+   "createdAt": "2026-10-27T14:40:38.745Z",
+   "discount": {
+    "cond": "на заказ букета",
+    "pct": 10
+   },
+   "name": "Студия-декора \"AQUARELLE\"",
+   "offer": {
+    "terms": "При бронировании до 31 декабря",
+    "title": "Фотозона в подарок",
+    "until": "2027-02-02"
+   },
+   "owner": "u_Zlis_mtcDgo1uN5IHoPDXg",
+   "photos": [
+    "570931c7223a9ffa2084c1ac00eee283"
+   ],
+   "price": "10000",
+   "promo": "",
+   "short": "Свадебное оформление зала, фотозона, выездная",
+   "updatedAt": "2026-10-27T14:40:38.745Z",
+   "visible": true
+  },
+  "requests/demo-couple": {
+   "items": [
+    {
+     "id": "rdemo01",
+     "demo": true,
+     "mode": "tender",
+     "categoryId": "decor",
+     "eventDate": "2027-07-18",
+     "city": "Нижний Новгород",
+     "venue": "",
+     "guestCount": 60,
+     "budgetMax": 80000,
+     "budgetNegotiable": false,
+     "description": "Хотим красивую фотозону, оформление президиума и гостевых столов в светлых тонах.",
+     "tags": [
+      "фотозона",
+      "президиум",
+      "гостевые столы"
+     ],
+     "refs": [],
+     "status": "open",
+     "createdAt": "2026-10-28T11:00:00.000Z",
+     "submittedAt": "2026-10-28T11:00:00.000Z",
+     "publishedAt": "2026-10-28T11:05:00.000Z",
+     "deadlineAt": "2026-12-15T20:59:00.000Z",
+     "invited": [],
+     "waves": 0,
+     "history": []
+    }
+   ],
+   "updatedAt": "2026-10-28T11:05:00.000Z"
+  }
+ },
+ "uploads": [
+  {
+   "id": "570931c7223a9ffa2084c1ac00eee283",
+   "file": "uploads/570931c7223a9ffa2084c1ac00eee283.jpg",
+   "type": "image/jpeg"
+  }
+ ]
+}
