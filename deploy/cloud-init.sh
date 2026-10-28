@@ -3,7 +3,7 @@
 set -euxo pipefail
 DOMAIN="xn----7sbaabxrwm9c.xn--p1ai"          # сказала-да.рф
 REPO="https://github.com/diezelman86/skazalada.git"
-ADMIN_EMAILS="diezelman86@gmail.com"
+ADMIN_EMAILS="${ADMIN_EMAILS:-admin@example.com}"   # подставляется при создании сервера
 APP=/opt/skazalada/app
 DATA=/var/lib/skazalada
 
