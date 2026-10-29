@@ -501,11 +501,11 @@ body{margin:0;font-size:16px;-webkit-font-smoothing:antialiased}button,a,input,s
       <div id="t-free" hidden>
         <div class="two-col">
           <form class="f panel" id="fdform" novalidate>
-            <h3>Свободная дата со спецценой</h3>
+            <h3>Свободная дата со специальной ценой</h3>
             <p class="note" style="margin:0">Освободилась дата или сорвался заказ? Предложите её со специальной ценой. Уведомление получат пары портала, у которых свадьба в этот день.</p>
             <p class="fd-left" id="fd-left"></p>
             <label for="fd-date">Дата *<input id="fd-date" type="date"></label>
-            <div class="g2"><label for="fd-price">Спеццена, ₽ *<input id="fd-price" type="number" min="1" step="1" placeholder="35000"></label>
+            <div class="g2"><label for="fd-price">Специальная цена, ₽ *<input id="fd-price" type="number" min="1" step="1" placeholder="35000"></label>
               <label for="fd-old">Обычная цена, ₽ <span class="hint">для сравнения</span><input id="fd-old" type="number" min="1" step="1" placeholder="50000"></label></div>
             <label for="fd-text">Что входит <span class="hint">до 400 знаков</span><textarea id="fd-text" rows="3" maxlength="400" placeholder="Полный день съёмки, 300 фото в обработке, готово за 3 недели"></textarea></label>
             <div class="row"><button class="btn" type="submit" id="fd-save">Предложить дату</button><span class="msg" id="fd-msg"></span></div>
@@ -829,7 +829,7 @@ $("#vp").addEventListener("click",e=>{
 
 /* ---------- writes ---------- */
 let pq=Promise.resolve();
-const SERVER_ERR={contacts_in_text:"Уберите телефон, ссылки и никнеймы. Контакты откроются после выбора исполнителя.",rate_limit_requests:"За сутки можно отправить не больше 3 заявок.",request_closed:"Заявка уже не принимает предложения.",request_hidden:"Эта заявка вам недоступна.",price:"Укажите цену целым числом в рублях или «Цена по запросу».",required_fields:"Заполните раздел, дату, город и описание.",forbidden:"Недостаточно прав для этого действия.",not_your_vendor:"Это действие доступно владельцу карточки.",role_vendor_only:"Это действие доступно только подрядчикам. Ваш аккаунт зарегистрирован как пара.",role_couple_only:"Это действие доступно только парам. Ваш аккаунт зарегистрирован как подрядчик.",vendor_not_approved:"Доступно после того, как организатор одобрит вашу карточку.",freedate_limit:"В этом месяце вы уже предложили 3 свободные даты. Новые можно будет добавить с 1-го числа.",freedate_past:"Дата должна быть не раньше сегодняшней.",old_price:"Обычная цена должна быть выше спеццены.",offer_not_found:"Предложение не найдено. Обновите страницу.",too_large:"Слишком большой объём данных.",cannot_delete_published:"Опубликованную заявку нельзя удалить, её можно закрыть.",auth:"Войдите в аккаунт."};
+const SERVER_ERR={contacts_in_text:"Уберите телефон, ссылки и никнеймы. Контакты откроются после выбора исполнителя.",rate_limit_requests:"За сутки можно отправить не больше 3 заявок.",request_closed:"Заявка уже не принимает предложения.",request_hidden:"Эта заявка вам недоступна.",price:"Укажите цену целым числом в рублях или «Цена по запросу».",required_fields:"Заполните раздел, дату, город и описание.",forbidden:"Недостаточно прав для этого действия.",not_your_vendor:"Это действие доступно владельцу карточки.",role_vendor_only:"Это действие доступно только подрядчикам. Ваш аккаунт зарегистрирован как пара.",role_couple_only:"Это действие доступно только парам. Ваш аккаунт зарегистрирован как подрядчик.",vendor_not_approved:"Доступно после того, как организатор одобрит вашу карточку.",freedate_limit:"В этом месяце вы уже предложили 3 свободные даты. Новые можно будет добавить с 1-го числа.",freedate_past:"Дата должна быть не раньше сегодняшней.",old_price:"Обычная цена должна быть выше специальной цены.",offer_not_found:"Предложение не найдено. Обновите страницу.",too_large:"Слишком большой объём данных.",cannot_delete_published:"Опубликованную заявку нельзя удалить, её можно закрыть.",auth:"Войдите в аккаунт."};
 function errText(e){if(e&&e.message){const k=String(e.message).split(":")[0];if(SERVER_ERR[k])return SERVER_ERR[k];if(k.startsWith("bad_transition"))return"Это действие сейчас недоступно для заявки. Обновите страницу.";if(k.startsWith("too_long"))return"Текст слишком длинный.";if(/[а-яё]/i.test(e.message))return e.message}const c=e&&e.code;
   if(c==="invalid_argument")return"Нет прав на сохранение. Попросите организатора открыть вам доступ к порталу.";
   if(c==="quota_exceeded")return"Хранилище портала заполнено. Сообщите организатору.";
@@ -970,8 +970,8 @@ $("#fdform").addEventListener("submit",async e=>{e.preventDefault();const m=$("#
   const date=$("#fd-date").value,price=parseInt($("#fd-price").value),old=parseInt($("#fd-old").value)||"",text=$("#fd-text").value.trim();
   if(!v){m.textContent="Сначала заполните карточку.";return}
   if(!date||date<todayStr()){m.textContent="Укажите дату не раньше сегодняшней.";$("#fd-date").focus();return}
-  if(!(price>0)){m.textContent="Укажите спеццену в рублях.";$("#fd-price").focus();return}
-  if(old&&old<=price){m.textContent="Обычная цена должна быть выше спеццены.";$("#fd-old").focus();return}
+  if(!(price>0)){m.textContent="Укажите специальную цену в рублях.";$("#fd-price").focus();return}
+  if(old&&old<=price){m.textContent="Обычная цена должна быть выше специальной цены.";$("#fd-old").focus();return}
   if(fdUsed()>=FD_LIMIT){m.textContent="Лимит "+FD_LIMIT+" свободные даты в месяц исчерпан.";return}
   const cur=((FD[UID]||{}).items)||[];if(cur.some(x=>x.date===date&&x.status==="active")){m.textContent="На эту дату у вас уже есть предложение.";return}
   const item={id:Math.random().toString(36).slice(2,10)+Date.now().toString(36),vendorId:v.id,date,price,oldPrice:old,text,status:"active"};
@@ -1014,7 +1014,7 @@ function setTab(t,editId){
   if(ROLE_TABS[ROLE]){const lb={couple:"Моя карта",requests:"Мои заявки",vendor:"Моя карточка",leads:"Заявки пар",free:"Свободные даты",clients:"Проверка карт"};document.querySelectorAll(".tabs button").forEach(b=>{if(lb[b.dataset.t]&&b.firstChild)b.firstChild.textContent=lb[b.dataset.t]})}lsSet("sd-tab",t==="admin"?"vendor":t);
   document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===t));
   ["couple","requests","vendor","leads","free","clients","admin"].forEach(x=>$("#t-"+x).hidden=x!==t);
-  $("#cab-lead").textContent=!UID&&window.SD_SERVER?"Войдите или зарегистрируйтесь. Это бесплатно для пар и партнёров.":t==="couple"?(LIVE?"Ваша дисконтная карта и данные свадьбы. Видны только вам.":"Ваша карта и данные свадьбы. В этом макете данные сохраняются только в вашем браузере."):t==="vendor"?"Заполните карточку: её увидят пары в вашем разделе каталога. Изменения появляются сразу после сохранения.":t==="clients"?"Проверяйте карты пар и отмечайте, когда применили скидку или спецпредложение.":t==="requests"?"Ваши запросы подрядчикам и их предложения. Всё бесплатно.":t==="leads"?"Заявки пар в вашем разделе и персональные приглашения. Отклик бесплатный.":t==="free"?"Предложите освободившуюся дату со спецценой: пары с этой датой свадьбы получат уведомление.":"Статистика по карте и управление карточками всех партнёров.";
+  $("#cab-lead").textContent=!UID&&window.SD_SERVER?"Войдите или зарегистрируйтесь. Это бесплатно для пар и партнёров.":t==="couple"?(LIVE?"Ваша дисконтная карта и данные свадьбы. Видны только вам.":"Ваша карта и данные свадьбы. В этом макете данные сохраняются только в вашем браузере."):t==="vendor"?"Заполните карточку: её увидят пары в вашем разделе каталога. Изменения появляются сразу после сохранения.":t==="clients"?"Проверяйте карты пар и отмечайте, когда применили скидку или спецпредложение.":t==="requests"?"Ваши запросы подрядчикам и их предложения. Всё бесплатно.":t==="leads"?"Заявки пар в вашем разделе и персональные приглашения. Отклик бесплатный.":t==="free"?"Предложите освободившуюся дату со специальной ценой: пары с этой датой свадьбы получат уведомление.":"Статистика по карте и управление карточками всех партнёров.";
   if(t==="vendor")loadVendorForm(editId||UID);
   if(t==="admin")renderAdmin();if(t==="free")renderFree();
   renderQRViews();if(typeof renderBroker==="function")renderBroker();if(t==="leads")setTimeout(leadsSeen,4000);
