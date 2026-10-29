@@ -247,7 +247,7 @@ let vpSig="";const vpSigOf=v=>JSON.stringify([v||null,v&&PX.avail[v.id],v&&Objec
 if(typeof renderVendorPage==="function"){const _rvp=renderVendorPage;renderVendorPage=function(v,isPreview){_rvp(v,isPreview);vpSig=isPreview?"":vpSigOf(v);if(!v||isPreview||!window.SD_SERVER)return;try{vendorExtras(v)}catch(e){console.error(e)}}}
 function vendorExtras(v){const box=$("#vp");document.title=v.name+" — "+catName(v.cat)+" | #СказалаДа!";
   const head=box.querySelector(".vp-head .vp-id");if(head&&!head.querySelector(".fav"))head.insertAdjacentHTML("beforeend",favBtn(v.id));
-  const hero=$("#vp-hero");if(hero&&v.plan==="PLUS"){const t=hero.querySelector(".tag");if(t){t.textContent="Партнёр"+(v.demo?" · демо":"");t.classList.add("tag-ad")}else hero.insertAdjacentHTML("afterbegin",'<span class="tag tag-ad">Партнёр</span>')}
+  const hero=$("#vp-hero");if(hero&&pct(v)){const t=hero.querySelector(".tag");if(t){t.textContent="Скидка по карте"+(v.demo?" · демо":"");t.classList.add("tag-ad")}else hero.insertAdjacentHTML("afterbegin",'<span class="tag tag-ad">Скидка по карте</span>')}
   const own=ROLE==="vendor"&&(v.id===UID||v.owner===UID);
   // FREE: скидки по карте нет — не показываем пустой блок и недействительный промокод
   if(!pct(v)&&!hasSpec(v)){const d=box.querySelector(".disc-big");if(d)d.remove();const pc=$("#vp-code");if(pc){const pn=pc.closest(".panel");if(pn)pn.innerHTML=`<span class="kicker">Связаться</span><p class="note" style="margin:0">${v.plan==="PLUS"?"Скидка по карте пока не утверждена.":"Партнёр размещён бесплатно: скидки по карте нет, свяжитесь по контактам ниже."}</p>${inviteBtn(v)}`}}

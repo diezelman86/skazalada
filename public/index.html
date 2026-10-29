@@ -793,7 +793,7 @@ const allKnown=()=>[...liveVendors,...EXAMPLES];
 
 /* ---------- catalog ---------- */
 function vcard(v,interactive=true,opts){opts=opts||{};
-  const tag=opts.pin&&opts.pin.paid?`<span class="tag tag-ad" title="${esc(opts.pin.info||"")}">${esc(opts.pin.label)}</span>`:v.plan==="PLUS"?`<span class="tag tag-ad">Партнёр${v.demo?" · демо":""}</span>`:v.example||v.demo?`<span class="tag">Демо</span>`:"";
+  const tag=opts.pin&&opts.pin.paid?`<span class="tag tag-ad" title="${esc(opts.pin.info||"")}">${esc(opts.pin.label)}</span>`:pct(v)?`<span class="tag tag-ad">Скидка по карте${v.demo||v.example?" · демо":""}</span>`:v.example||v.demo?`<span class="tag">Демо</span>`:"";
   const inner=`<div class="ph" style="${bgFor(v)}">${tag}${v.photos&&v.photos.length?"":esc(initials(v.name))}</div>
    <div class="body">
      <div class="nm ${v.avatar?"has-av":""}">${avHtml(v)}<div><span class="meta">${esc(catName(v.cat))}${v.ratingCount?` · <span class="stars" aria-label="Рейтинг ${v.rating} из 5">★ ${v.rating} <small>(${v.ratingCount})</small></span>`:""}</span><h4>${esc(v.name||"Название")}</h4></div></div>
@@ -2003,7 +2003,7 @@ let vpSig="";const vpSigOf=v=>JSON.stringify([v||null,v&&PX.avail[v.id],v&&Objec
 if(typeof renderVendorPage==="function"){const _rvp=renderVendorPage;renderVendorPage=function(v,isPreview){_rvp(v,isPreview);vpSig=isPreview?"":vpSigOf(v);if(!v||isPreview||!window.SD_SERVER)return;try{vendorExtras(v)}catch(e){console.error(e)}}}
 function vendorExtras(v){const box=$("#vp");document.title=v.name+" — "+catName(v.cat)+" | #СказалаДа!";
   const head=box.querySelector(".vp-head .vp-id");if(head&&!head.querySelector(".fav"))head.insertAdjacentHTML("beforeend",favBtn(v.id));
-  const hero=$("#vp-hero");if(hero&&v.plan==="PLUS"){const t=hero.querySelector(".tag");if(t){t.textContent="Партнёр"+(v.demo?" · демо":"");t.classList.add("tag-ad")}else hero.insertAdjacentHTML("afterbegin",'<span class="tag tag-ad">Партнёр</span>')}
+  const hero=$("#vp-hero");if(hero&&pct(v)){const t=hero.querySelector(".tag");if(t){t.textContent="Скидка по карте"+(v.demo?" · демо":"");t.classList.add("tag-ad")}else hero.insertAdjacentHTML("afterbegin",'<span class="tag tag-ad">Скидка по карте</span>')}
   const own=ROLE==="vendor"&&(v.id===UID||v.owner===UID);
   // FREE: скидки по карте нет — не показываем пустой блок и недействительный промокод
   if(!pct(v)&&!hasSpec(v)){const d=box.querySelector(".disc-big");if(d)d.remove();const pc=$("#vp-code");if(pc){const pn=pc.closest(".panel");if(pn)pn.innerHTML=`<span class="kicker">Связаться</span><p class="note" style="margin:0">${v.plan==="PLUS"?"Скидка по карте пока не утверждена.":"Партнёр размещён бесплатно: скидки по карте нет, свяжитесь по контактам ниже."}</p>${inviteBtn(v)}`}}
