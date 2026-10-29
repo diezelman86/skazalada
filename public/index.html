@@ -376,15 +376,14 @@ body{margin:0;font-size:16px;-webkit-font-smoothing:antialiased}button,a,input,s
       <article class="panel"><span class="kicker">Из карточки</span><h3>Адресные запросы</h3><p>Кнопка «Получить предложение» в вашей карточке: пара пишет напрямую вам, без общей ленты.</p></article>
       <article class="panel"><span class="kicker">Срочно</span><h3>Свадебный SOS</h3><p>Если у пары сорвался подрядчик, срочная заявка приходит одобренным партнёрам раздела волнами.</p></article>
       <article class="panel"><span class="kicker">Даты</span><h3>Календарь и свободные даты</h3><p>Отмечайте занятые и свободные дни, предлагайте освободившиеся даты со специальной ценой.</p></article>
-      <article class="panel"><span class="kicker">Карта</span><h3>Скидка и спецпредложение</h3><p>Ваша скидка по карте #СказалаДа! публикуется после утверждения условий организатором.</p></article>
-      <article class="panel"><span class="kicker">Внимание</span><h3>Продвижение в каталоге</h3><p>Участие в блоке «В центре внимания» по правилам ротации. Бесплатные карточки остаются в общей выдаче.</p></article></div>
+      <article class="panel"><span class="kicker">Карта</span><h3>Скидка и спецпредложение</h3><p>Ваша скидка по карте #СказалаДа! публикуется после утверждения условий организатором.</p></article></div>
     <h2>Условия допуска к дисконтной системе</h2>
     <div class="panel coop-terms"><ul><li>Участие или подтверждённое партнёрство со Свадебным фестивалем #СказалаДа!.</li><li>Согласование размера скидки, срока действия и правил её применения.</li><li>Обязательства перед держателями карты: скидка предоставляется по предъявлении карты или QR-кода на согласованных условиях.</li><li>Статус «Партнёр +» включает организатор после проверки. Оплата сама по себе не гарантирует статус.</li></ul></div>
     <h2>Скидки по разделам</h2>
     <div class="tbl"><table><thead><tr><th>Раздел</th><th class="n">Партнёров</th><th class="n">Скидка от–до</th><th class="n">Со спецпредложением</th></tr></thead><tbody id="sumtbl"></tbody></table></div>
     <h2>Вопросы и ответы</h2>
     <div class="faq" id="coop-faq">
-      <details><summary>Чем бесплатное размещение отличается от «Партнёр +»?</summary><p>Бесплатная карточка всегда доступна в каталоге и поиске, у неё есть фото, описание и контакты. «Партнёр +» добавляет скидку по карте после утверждения, тендеры и брокер, адресные запросы, SOS, календарь занятости, свободные даты и продвижение по правилам тарифа.</p></details>
+      <details><summary>Чем бесплатное размещение отличается от «Партнёр +»?</summary><p>Бесплатная карточка всегда доступна в каталоге и поиске, у неё есть фото, описание и контакты. «Партнёр +» добавляет скидку по карте после утверждения, тендеры и брокер, адресные запросы, SOS, календарь занятости и свободные даты. Рекламное продвижение в каталоге оформляется отдельно.</p></details>
       <details><summary>Как подать заявку?</summary><p>Нажмите «Подключиться к дисконтной системе #СказалаДа!» и заполните короткую форму. Если вы ещё не зарегистрированы, сначала создайте аккаунт подрядчика — форма откроется сразу после входа.</p></details>
       <details><summary>Сколько длится рассмотрение?</summary><p>Организатор свяжется с вами после рассмотрения. Статус заявки виден в кабинете, во вкладке «Тариф».</p></details>
       <details><summary>Можно ли отменить?</summary><p>Да. Заявку на рассмотрении можно отозвать в кабинете. По окончании срока «Партнёр +» карточка остаётся в каталоге бесплатно, история сделок сохраняется.</p></details>
@@ -818,7 +817,7 @@ function render(){
   list.sort(sort==="disc"?(a,b)=>pct(b)-pct(a):sort==="new"?(a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")):(a,b)=>String(a.name).localeCompare(String(b.name),"ru"));
   $("#cat-title").textContent=state.cat==="all"?"Все партнёры":catName(state.cat);
   $("#result").textContent="Найдено: "+list.length;
-  // «В центре внимания»: платные кампании и ротация «Партнёр +»; бесплатные карточки остаются в общей выдаче (ТЗ 2.2)
+  // «В центре внимания»: только оплаченные и промаркированные кампании (ротация «Партнёр +» выключена настройкой); бесплатные карточки остаются в общей выдаче (ТЗ 2.2)
   const pin=(!q&&typeof pinnedFor==="function")?pinnedFor(state.cat,list):[];const pinIds=new Set(pin.map(x=>x.v.id));
   $("#pinned").hidden=!pin.length;$("#pinned-grid").innerHTML=pin.map(x=>vcard(x.v,true,{pin:x})).join("");if(pin.length&&typeof pinnedShown==="function")pinnedShown(pin);
   const organic=pin.length&&typeof PX!=="undefined"&&PX.settings.excludePinnedFromOrganic!==false?list.filter(v=>!pinIds.has(v.id)):list;
@@ -1762,7 +1761,7 @@ async function startServer(){
    панель организатора, человекочитаемые адреса. Права проверяет сервер; здесь — интерфейс.
    ===================================================================================== */
 var PLUS_READY=false;
-var PX={settings:{features:{},pinnedMobile:2,pinnedDesktop:3,firstPage:12,excludePinnedFromOrganic:true,plusRotation:true,adMarker:"Реклама",viewMinPct:50,viewMinMs:1000,calendarMonths:18},
+var PX={settings:{features:{},pinnedMobile:2,pinnedDesktop:3,firstPage:12,excludePinnedFromOrganic:true,plusRotation:false,adMarker:"Реклама",viewMinPct:50,viewMinMs:1000,calendarMonths:18},
   plans:{},slots:{},camps:{},subs:{},apps:{},favs:[],favsLoaded:false,avail:{},orders:{},reviews:{},sosresp:{},stats:null,statsAt:0,adm:{}};
 const PXF=n=>!PX.settings.features||PX.settings.features[n]!==false;
 const papi=(url,body)=>apiFetch(url,body===undefined?{}:{method:"POST",body:JSON.stringify(body)});
@@ -1948,7 +1947,7 @@ function pinnedFor(cat,list){if(!PLUS_READY)return[];if(!window.SD_SERVER||!PXF(
   const out=[],used=new Set();const add=(v,c)=>{if(out.length<n&&v&&!used.has(v.id)){used.add(v.id);out.push(c?{v,campaignId:c.id,label:c.marker||PX.settings.adMarker||"Реклама",info:adInfo(c),paid:true}:{v,campaignId:"",label:"Партнёр",info:"Партнёр портала. Показ по правилам ротации."})}};
   camps.filter(c=>c.exclusive).sort((a,b)=>(b.priority||0)-(a.priority||0)).forEach(c=>add(inList.get(c.vendorId),c));
   weightedOrder(camps.filter(c=>!c.exclusive),seed,c=>(c.weight||1)*(1+(c.priority||0))).forEach(c=>add(inList.get(c.vendorId),c));
-  if(PX.settings.plusRotation!==false)weightedOrder(list.filter(v=>v.plan==="PLUS"),seed+7,()=>1).forEach(v=>add(v,null));
+  if(PX.settings.plusRotation===true)weightedOrder(list.filter(v=>v.plan==="PLUS"),seed+7,()=>1).forEach(v=>add(v,null));
   return out}
 function pinnedShown(pin){const note=$("#pinned-note");if(note)note.textContent=pin.some(x=>x.paid)?(PX.settings.adMarker||"Реклама")+" и партнёры портала":"Партнёры портала, показ по ротации";
   const g=$("#pinned-grid");g.querySelectorAll(".vc").forEach((el,i)=>{const x=pin[i];if(!x)return;el.dataset.evKind=x.campaignId?"view":"pin_view";el.dataset.evSlot="CAT_PINNED";if(x.campaignId)el.dataset.evCamp=x.campaignId;el.dataset.evVendor=x.v.id});observeAll(g)}
@@ -2039,7 +2038,7 @@ function directBusyCheck(dv,date){const box=$("#rf-busy");if(!box)return;const s
   box.hidden=false;box.innerHTML=`<b>${fmtDate(date)} у «${esc(dv.name)}» отмечено «Занято».</b><span>Запрос всё равно можно отправить — возможно, планы изменились. Или посмотрите других специалистов раздела:</span>${alt.length?`<div class="row">${alt.map(x=>`<a class="btn ghost small" href="#direct-${esc(x.id)}" style="text-decoration:none">${esc(x.name)}</a>`).join("")}</div>`:""}<label class="chk" style="font-weight:600"><input type="checkbox" id="rf-busy-ok"> Всё равно отправить запрос этому подрядчику</label>`}
 
 /* ---------- страница «Сотрудничество» (ТЗ 2.4) ---------- */
-const COOP_ROWS=[["Карточка, фотографии, контакты","Да","Да"],["Основная скидка и спецпредложение по карте","Нет","Да, после допуска организатором"],["Тендеры, брокер, отклики","Нет — раздел виден с замком","Да"],["«Получить предложение» из карточки","Нет — видны контакты","Да, адресный запрос"],["«Свадебный SOS»","Нет — раздел виден с замком","Да, по категории"],["Календарь свободных и занятых дат","Нет — раздел виден с замком","Да, включаете сами"],["Свободные даты со специальной ценой","Нет","Да, до 3 в месяц"],["Отзывы подтверждённых заказов","Да, после проверки сделки","Да, после проверки сделки"],["«В центре внимания» в каталоге","Нет","Участие в ротации по правилам"],["Статистика","Базовая","Расширенная"],["Подача заявки на подключение","Да, бесплатно","Видны условия продления"]];
+const COOP_ROWS=[["Карточка, фотографии, контакты","Да","Да"],["Основная скидка и спецпредложение по карте","Нет","Да, после допуска организатором"],["Тендеры, брокер, отклики","Нет — раздел виден с замком","Да"],["«Получить предложение» из карточки","Нет — видны контакты","Да, адресный запрос"],["«Свадебный SOS»","Нет — раздел виден с замком","Да, по категории"],["Календарь свободных и занятых дат","Нет — раздел виден с замком","Да, включаете сами"],["Свободные даты со специальной ценой","Нет","Да, до 3 в месяц"],["Отзывы подтверждённых заказов","Да, после проверки сделки","Да, после проверки сделки"],["Реклама в каталоге и на главной","По отдельному договору","По отдельному договору"],["Статистика","Базовая","Расширенная"],["Подача заявки на подключение","Да, бесплатно","Видны условия продления"]];
 function renderCoop(){const t=$("#coop-cmp");if(!t)return;
   t.innerHTML=COOP_ROWS.map(([f,a,b])=>`<tr><td data-l="Возможность"><b>${esc(f)}</b></td><td data-l="Бесплатно">${esc(a)} ${/^Да/.test(a)?'<span class="chip ok">доступно</span>':""}</td><td data-l="«Партнёр +»">${esc(b)} <span class="chip plus">после подключения</span></td></tr>`).join("");
   const P=PX.plans.PLUS||{};$("#coop-price").textContent="Стоимость и срок «Партнёр +»: "+(P.priceRub?fmtRub(P.priceRub)+" ₽"+(P.billingPeriod?" / "+P.billingPeriod:""):(PX.settings.plusPriceText||"условия уточняет организатор"))+". Отправка заявки — это обращение, а не оплата и не автоматическое подключение.";
@@ -2424,7 +2423,7 @@ function admSettings(el){const s=PX.settings,F2=s.features||{};const FL={plus:"�
    <fieldset style="border:0;padding:0"><legend>Функции</legend>${Object.entries(FL).map(([k,l])=>`<label class="chk"><input type="checkbox" name="f_${k}" ${F2[k]!==false?"checked":""}> ${l}</label>`).join("")}</fieldset>
    <div class="g2"><label>Карточек в «В центре внимания» на телефоне<input type="number" name="pinnedMobile" min="0" max="4" value="${s.pinnedMobile??2}"></label><label>…на компьютере<input type="number" name="pinnedDesktop" min="0" max="6" value="${s.pinnedDesktop??3}"></label></div>
    <div class="g2"><label>Карточек до «Показать ещё»<input type="number" name="firstPage" min="6" max="48" value="${s.firstPage??12}"></label><label>Пометка рекламы<input name="adMarker" maxlength="40" value="${esc(s.adMarker||"Реклама")}"></label></div>
-   <label class="chk"><input type="checkbox" name="excludePinnedFromOrganic" ${s.excludePinnedFromOrganic!==false?"checked":""}> Не повторять карточки из «В центре внимания» в общей выдаче</label><label class="chk"><input type="checkbox" name="plusRotation" ${s.plusRotation!==false?"checked":""}> Участники «Партнёр +» занимают невыкупленные места по ротации</label>
+   <label class="chk"><input type="checkbox" name="excludePinnedFromOrganic" ${s.excludePinnedFromOrganic!==false?"checked":""}> Не повторять карточки из «В центре внимания» в общей выдаче</label><label class="chk"><input type="checkbox" name="plusRotation" ${s.plusRotation===true?"checked":""}> Участники «Партнёр +» занимают невыкупленные места по ротации</label>
    <div class="g2"><label>Минимальная видимая площадь для показа, %<input type="number" name="viewMinPct" min="10" max="100" value="${s.viewMinPct??50}"></label><label>Минимальное время показа, мс<input type="number" name="viewMinMs" min="0" max="10000" step="100" value="${s.viewMinMs??1000}"></label></div>
    <div class="g2"><label>Календарь вперёд, месяцев<input type="number" name="calendarMonths" min="6" max="36" value="${s.calendarMonths??18}"></label><label>Пауза между волнами SOS, мин<input type="number" name="sosWaveMinutes" min="5" max="1440" value="${s.sosWaveMinutes??30}"></label></div>
    <div class="g2"><label>Волн SOS до эскалации<input type="number" name="sosMaxWaves" min="1" max="5" value="${s.sosMaxWaves??3}"></label><label class="chk" style="align-self:end"><input type="checkbox" name="sosAutoPublish" ${s.sosAutoPublish!==false?"checked":""}> Ускоренная публикация SOS (антиспам)</label></div>

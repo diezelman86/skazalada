@@ -93,7 +93,7 @@ const itemsOf = d => (d && Array.isArray(d.items)) ? d.items : [];
 /* ---------- настройки, тарифы, статус партнёра ---------- */
 export const DEFAULT_SETTINGS = {
   features: { plus: true, ads: true, favorites: true, direct: true, calendar: true, sos: true, reviews: true, seo: true },
-  pinnedMobile: 2, pinnedDesktop: 3, firstPage: 12, excludePinnedFromOrganic: true, plusRotation: true, adMarker: "Реклама",
+  pinnedMobile: 2, pinnedDesktop: 3, firstPage: 12, excludePinnedFromOrganic: true, plusRotation: false, adMarker: "Реклама",
   viewMinPct: 50, viewMinMs: 1000, calendarMonths: 18, sosWaveMinutes: 30, sosMaxWaves: 3, sosPerDay: 1, sosPerMonth: 3, sosAutoPublish: true,
   plusPriceText: "Условия уточняет организатор", plusDurationText: "", reviewMin: 50, reviewMax: 1500, trialEnd: "2027-02-28",
 };
@@ -790,7 +790,7 @@ const MIGRATIONS = [
     if (!getDoc("plans/FREE")) setDoc("plans/FREE", { code: "FREE", name: "Бесплатное размещение", priceRub: 0, billingPeriod: "", isPublic: true, enabled: true, createdAt: nowIso(), updatedAt: nowIso(),
       features: ["Карточка в каталоге и поиске", "Фото, описание, контакты", "Отзывы по подтверждённым заказам", "Базовая статистика просмотров"] }, "migration");
     if (!getDoc("plans/PLUS")) setDoc("plans/PLUS", { code: "PLUS", name: "Партнёр +", priceRub: null, billingPeriod: "", isPublic: true, enabled: true, createdAt: nowIso(), updatedAt: nowIso(),
-      features: ["Скидка и спецпредложение по карте #СказалаДа! после утверждения", "Тендеры, свадебный брокер и отклики", "Адресные запросы из карточки", "Свадебный SOS по вашему разделу", "Календарь свободных и занятых дат", "Свободные даты со специальной ценой", "Участие в блоке «В центре внимания» по правилам ротации", "Расширенная статистика"] }, "migration");
+      features: ["Скидка и спецпредложение по карте #СказалаДа! после утверждения", "Тендеры, свадебный брокер и отклики", "Адресные запросы из карточки", "Свадебный SOS по вашему разделу", "Календарь свободных и занятых дат", "Свободные даты со специальной ценой", "Расширенная статистика"] }, "migration");
     for (const [code, d] of Object.entries(SLOT_DEFAULTS)) if (!getDoc("adslots/" + code)) setDoc("adslots/" + code, { code, ...d, categories: [], enabled: true, createdAt: nowIso() }, "migration");
     // текущим одобренным партнёрам — пробный «Партнёр +» до конца фестиваля (решение владельца портала 29.10.2026)
     const end = new Date(DEFAULT_SETTINGS.trialEnd + "T23:59:59+03:00").toISOString();
@@ -800,6 +800,9 @@ const MIGRATIONS = [
         changeHistory: [{ at: nowIso(), by: "system", action: "grant", note: "Миграция v2: пробный «Партнёр +»" }] }, "migration"); }
     for (const d of listCol("vendors")) { const v = { ...d.data }; if (v.slug) continue; prepVendorWrite(v, null, d.id); setDoc("vendors/" + d.id, v, "migration"); }
   }],
+  ["2026-10-29-rotation-off", () => { // решение владельца: «В центре внимания» — только оплаченная и промаркированная реклама
+    const s = getDoc("settings/main"); if (s) setDoc("settings/main", { ...s, plusRotation: false, updatedAt: nowIso() }, "migration"); 
+    const p = getDoc("plans/PLUS"); if (p) setDoc("plans/PLUS", { ...p, features: (p.features || []).filter(f => !/ротаци/i.test(f)), updatedAt: nowIso() }, "migration"); }],
 ];
 function migrate() {
   const done = new Set(db.prepare("SELECT id FROM migrations").all().map(r => r.id)); const todo = MIGRATIONS.filter(([id]) => !done.has(id)); if (!todo.length) return;
