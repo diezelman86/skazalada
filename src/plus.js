@@ -568,7 +568,9 @@ function admApps(el){const seen=seenAt("apps");let l=Object.values(PX.apps).sort
     try{const r=await papi("/api/admin/application",{id:row.dataset.app,status:b.dataset.as,comment:com});PX.apps[r.application.id]=r.application;toast("Статус: "+APP_ST_L[b.dataset.as]);admApps(el)}catch(err){toast(err.message||errText(err));b.disabled=false}});
   el.querySelectorAll("[data-aplus]").forEach(b=>b.onclick=()=>{admSec="subs";lsSet("sd-adm-sec","subs");PX.adm.plusFor={vendorId:b.dataset.aplus,applicationId:b.dataset.appid};renderAdminPlus()});
   el.querySelectorAll("[data-acamp]").forEach(b=>b.onclick=()=>{admSec="ads";lsSet("sd-adm-sec","ads");PX.adm.campEdit={id:"",vendorId:b.dataset.acamp};renderAdminPlus()});
-  markSeen("apps")}
+  // отмечаем просмотр только если появились новые заявки — иначе каждая перерисовка писала бы профиль
+  const newest=Object.values(PX.apps).reduce((m,a)=>String(a.submittedAt)>m?String(a.submittedAt):m,"");
+  if(newest>seen&&!admApps.marking){admApps.marking=true;setTimeout(()=>{admApps.marking=false;markSeen("apps")},4000)}}
 function planLabel(v){const p=v._plan||{};return p.active?(p.admitted?"«Партнёр +» до "+fmtDate(p.until):"«Партнёр +» без допуска"):p.expired?"истёк "+fmtDate(p.until):p.status==="suspended"?"приостановлен":p.status==="revoked"?"отозван":"FREE"}
 const termsText=t=>t?`${t.discount&&t.discount.pct?"−"+t.discount.pct+"% "+(t.discount.cond||""):"без скидки"}${t.promo?" · промокод "+t.promo:""}${t.offer&&t.offer.title?" · спецпредложение «"+t.offer.title+"»"+(t.offer.until?" до "+fmtDate(t.offer.until):""):""}`:"—";
 let subQ="";
