@@ -380,6 +380,7 @@ body{margin:0;font-size:16px;-webkit-font-smoothing:antialiased}button,a,input,s
         <button role="tab" data-t="requests" aria-selected="false">Мои заявки</button>
         <button role="tab" data-t="vendor" aria-selected="false">Подрядчик</button>
         <button role="tab" data-t="leads" aria-selected="false">Заявки</button>
+        <button role="tab" data-t="free" aria-selected="false">Свободные даты</button>
         <button role="tab" data-t="clients" aria-selected="false">Проверка карт</button>
         <button role="tab" data-t="admin" aria-selected="false" id="tab-admin" hidden>Организатор</button>
       </div>
@@ -402,12 +403,15 @@ body{margin:0;font-size:16px;-webkit-font-smoothing:antialiased}button,a,input,s
             <div class="row"><button class="btn" type="submit" id="c-save">Сохранить</button><span class="msg" id="c-msg"></span></div>
           </form>
         </div>
+        <div style="display:grid;gap:16px;align-content:start">
+        <div class="panel" id="fd-couple" hidden><h3>Свободные даты в день вашей свадьбы</h3><div class="list" id="fd-clist"></div></div>
         <div class="panel" style="justify-items:start">
           <h3>QR-код карты</h3>
           <p class="note" style="margin:0">Покажите QR-код подрядчику: он наведёт камеру телефона, и у него откроется проверка карты. Можно просто назвать номер.</p>
           <div class="qr" id="qr"><span class="note">QR-код появится после оформления карты</span></div>
           <div class="code" id="qr-code" hidden><code id="qr-num"></code><button class="btn ghost small" id="qr-copy" type="button">Скопировать номер</button></div>
           <div class="hist-wrap"><h3>История скидок</h3><div class="list" id="couple-hist"></div></div>
+        </div>
         </div>
       </div>
 
@@ -416,6 +420,7 @@ body{margin:0;font-size:16px;-webkit-font-smoothing:antialiased}button,a,input,s
         <div class="two-col" style="grid-template-columns:1fr minmax(0,380px)">
           <form class="f panel" id="vform" novalidate>
             <div class="row" style="justify-content:space-between"><h3 id="vf-title">Карточка партнёра</h3><span class="pill" id="vf-status">Не опубликована</span></div>
+            <div class="mod-note" id="vf-mod" hidden></div>
             <div class="g2">
               <label for="vf-name">Название или имя *<input id="vf-name" maxlength="80" placeholder="Студия «Лето»"></label>
               <label for="vf-cat">Раздел каталога *<select id="vf-cat"></select></label>
@@ -454,6 +459,13 @@ body{margin:0;font-size:16px;-webkit-font-smoothing:antialiased}button,a,input,s
             </fieldset>
 
             <fieldset>
+              <legend>Аватар</legend>
+              <p class="hint" style="margin:0">Ваше личное фото или логотип. Показывается в каталоге рядом с названием и на вашей странице.</p>
+              <div class="av-edit"><div class="av lg" id="vf-av"></div><div class="row"><label class="btn ghost small" for="vf-avfile" tabindex="0" id="vf-avbtn">Загрузить аватар</label><button class="btn ghost small" type="button" id="vf-avdel" hidden>Убрать</button></div></div>
+              <input id="vf-avfile" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+            </fieldset>
+
+            <fieldset>
               <legend>Фото</legend>
               <p class="hint" style="margin:0">До 10 фото, первое станет обложкой. JPG, PNG или WebP до 20 МБ.</p>
               <div class="photos" id="vf-photos"></div>
@@ -485,6 +497,23 @@ body{margin:0;font-size:16px;-webkit-font-smoothing:antialiased}button,a,input,s
         <label class="f" for="ld-act" id="ld-act-wrap" hidden style="display:grid;gap:4px;font-size:16px;font-weight:600;color:var(--muted)">Смотреть как партнёр<select id="ld-act"></select></label></div>
         <div class="list" id="leads"></div></div></div>
 
+      <!-- vendor free dates -->
+      <div id="t-free" hidden>
+        <div class="two-col">
+          <form class="f panel" id="fdform" novalidate>
+            <h3>Свободная дата со спецценой</h3>
+            <p class="note" style="margin:0">Освободилась дата или сорвался заказ? Предложите её со специальной ценой. Уведомление получат пары портала, у которых свадьба в этот день.</p>
+            <p class="fd-left" id="fd-left"></p>
+            <label for="fd-date">Дата *<input id="fd-date" type="date"></label>
+            <div class="g2"><label for="fd-price">Спеццена, ₽ *<input id="fd-price" type="number" min="1" step="1" placeholder="35000"></label>
+              <label for="fd-old">Обычная цена, ₽ <span class="hint">для сравнения</span><input id="fd-old" type="number" min="1" step="1" placeholder="50000"></label></div>
+            <label for="fd-text">Что входит <span class="hint">до 400 знаков</span><textarea id="fd-text" rows="3" maxlength="400" placeholder="Полный день съёмки, 300 фото в обработке, готово за 3 недели"></textarea></label>
+            <div class="row"><button class="btn" type="submit" id="fd-save">Предложить дату</button><span class="msg" id="fd-msg"></span></div>
+          </form>
+          <div class="panel"><h3>Мои свободные даты</h3><div class="list" id="fd-list"></div></div>
+        </div>
+      </div>
+
       <!-- clients: card check for partners -->
       <div id="t-clients" hidden>
         <div class="two-col">
@@ -504,6 +533,9 @@ body{margin:0;font-size:16px;-webkit-font-smoothing:antialiased}button,a,input,s
 
       <!-- admin -->
       <div id="t-admin" hidden>
+        <div class="panel" id="ad-mod" style="margin-bottom:20px"><h3>Карточки на модерации <span class="cnt" id="ad-mod-n" hidden></span></h3>
+          <p class="note" style="margin:0">Новые карточки подрядчиков появляются в каталоге только после вашего одобрения. Отредактированные после одобрения обновляются сразу.</p>
+          <div class="list" id="ad-modlist"></div></div>
         <div class="panel" style="margin-bottom:20px">
           <h3>Заявки и отклики</h3>
           <div class="kpis kpis6" id="ab-kpis"></div>
@@ -542,6 +574,21 @@ body{margin:0;font-size:16px;-webkit-font-smoothing:antialiased}button,a,input,s
 .hero-cta,.row{flex-wrap:wrap!important}.hero-cta .textlink{white-space:normal;max-width:100%}
 .cat .tools>*{min-width:0;max-width:100%}
 @media(max-width:600px){.hero,.cat,.brk-hero{grid-template-columns:minmax(0,1fr)}.cat .tools .search,.cat .tools select,.catsel{width:100%;flex:1 1 100%}.stats{flex-wrap:wrap;gap:14px 20px}.hero-cta .btn{flex:1 1 auto}}
+</style>
+<style>
+.av{flex:none;width:48px;height:48px;border-radius:50%;background:var(--berry-soft) center/cover no-repeat;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+.av.lg{width:96px;height:96px;border-width:3px}
+.nm.has-av{display:flex;gap:12px;align-items:center;min-width:0}.nm.has-av>div{min-width:0}
+.vp-id{display:flex;gap:18px;align-items:center}.vp-id>div{min-width:0}
+.av-edit{display:flex;gap:16px;align-items:center;flex-wrap:wrap}.av-edit .av{display:grid;place-items:center;color:var(--muted);font-size:13px;text-align:center}
+.mod-note{border-radius:10px;padding:12px 14px;font-size:15px;line-height:1.6;background:var(--sage-soft);color:var(--ink)}
+.mod-note.bad{background:#fbe9e7;color:#8a2a1c}.mod-note.wait{background:var(--berry-soft)}
+.pill.wait{background:var(--berry-soft);color:var(--berry)}.pill.bad{background:#fbe9e7;color:#8a2a1c}
+.fd{display:grid;gap:8px;border:1px solid var(--line);border-left:3px solid var(--berry);border-radius:12px;padding:14px 16px;background:var(--surface)}
+.fd .fd-top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.fd .fd-price{font-size:22px;font-weight:800;color:var(--berry)}.fd .fd-price s{font-size:15px;font-weight:500;color:var(--muted);margin-left:8px}
+.fd p{margin:0;font-size:15px;line-height:1.6;color:var(--muted)}.fd.closed{opacity:.6;border-left-color:var(--line)}
+.fd-left{font-size:15px;color:var(--muted)}.fd-left b{color:var(--ink)}
 </style>
 <style>
 .role-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;border:0!important;padding:0!important;margin:0}
@@ -679,12 +726,14 @@ function lsSet(k,v){try{localStorage.setItem(k,v)}catch(_){}}
 let DB=null,USER=null,ASSETS=null,UID=null,IS_OWNER=false,CAN_WRITE=null;
 /* Роль аккаунта: null — все вкладки (организатор, демо), "couple" — пара, "vendor" — подрядчик, "none" — ещё не выбрана */
 var ROLE=null;
-const ROLE_TABS={couple:["couple","requests"],vendor:["vendor","leads","clients"]};
-const tabAllowed=t=>t==="admin"?IS_OWNER:!ROLE_TABS[ROLE]||ROLE_TABS[ROLE].includes(t);
+const ROLE_TABS={couple:["couple","requests"],vendor:["vendor","leads","free","clients"]};
+const tabAllowed=t=>t==="admin"?IS_OWNER:t==="free"&&!window.SD_SERVER?false:!ROLE_TABS[ROLE]||ROLE_TABS[ROLE].includes(t);
 let liveVendors=[],liveLoaded=false,profile={};
 let state={cat:"all"};
 
-const visibleVendors=()=>{const live=liveVendors.filter(v=>v.visible!==false&&v.name);return live.length?live:(liveLoaded&&DB?[]:EXAMPLES)};
+const approved=v=>!v.mod||v.mod==="approved";
+const avHtml=(v,cls)=>v&&v.avatar?`<span class="av ${cls||""}" style="background-image:url('${blob(v.avatar)}')" role="img" aria-label="${esc(v.name||"")}"></span>`:"";
+const visibleVendors=()=>{const live=liveVendors.filter(v=>v.visible!==false&&v.name&&approved(v));return live.length?live:(liveLoaded&&DB?[]:EXAMPLES)};
 const usingExamples=()=>visibleVendors()===EXAMPLES;
 const allKnown=()=>[...liveVendors,...EXAMPLES];
 
@@ -693,7 +742,7 @@ function vcard(v,interactive=true){
   const tag=v.example?`<span class="tag">Демо</span>`:v.demo?`<span class="tag">Демо</span>`:"";
   const inner=`<div class="ph" style="${bgFor(v)}">${tag}${v.photos&&v.photos.length?"":esc(initials(v.name))}</div>
    <div class="body">
-     <div class="nm"><span class="meta">${esc(catName(v.cat))}</span><h4>${esc(v.name||"Название")}</h4></div>
+     <div class="nm ${v.avatar?"has-av":""}">${avHtml(v)}<div><span class="meta">${esc(catName(v.cat))}</span><h4>${esc(v.name||"Название")}</h4></div></div>
      <div class="big">${pct(v)?"−"+pct(v)+"%":"—"}<small>по карте</small></div>
      <div class="sh">${esc(v.short||"")}</div>
      ${hasSpec(v)?`<div class="offer-chip">Спецпредложение: ${esc(v.offer.title)}</div>`:""}
@@ -733,6 +782,7 @@ function findV(id){return allKnown().find(x=>x.id===id)}
 function renderVendorPage(v,isPreview){
   const box=$("#vp");
   if(!v){box.innerHTML=`<div class="empty">${liveLoaded||!DB?"Партнёр не найден или скрыт из каталога.":"Загружаем карточку…"} <a href="#catalog">Вернуться в каталог</a></div>`;return}
+  const modBar=!isPreview&&!approved(v)?`<div class="prevbar"><span>${v.mod==="rejected"?"Карточка отклонена модератором и не видна в каталоге.":"Карточка на модерации: пары её пока не видят."}</span>${IS_OWNER?"":`<a class="btn small" href="#cabinet" style="text-decoration:none">В кабинет</a>`}</div>`:"";
   const ph=v.photos||[],c=v.contacts||{};
   const until=hasSpec(v)&&v.offer.until?"Действует до "+new Date(v.offer.until).toLocaleDateString("ru-RU")+". ":"";
   const rows=[["Телефон",c.phone],["ВКонтакте",c.vk],["Telegram / MAX",c.tg],["Сайт",c.site],["Адрес",c.addr]].filter(r=>r[1]);
@@ -740,15 +790,15 @@ function renderVendorPage(v,isPreview){
   const others=isPreview?[]:visibleVendors().filter(x=>x.cat===v.cat&&x.id!==v.id).slice(0,3);
   const tag=v.example?"Демо":v.demo?"Демо":"";
   box.innerHTML=`
-   ${isPreview?`<div class="prevbar"><span>Предпросмотр: так карточку увидят пары. Изменения ещё не сохранены.</span><a class="btn small" href="#cabinet" style="text-decoration:none">Вернуться в кабинет</a></div>`:""}
+   ${modBar}${isPreview?`<div class="prevbar"><span>Предпросмотр: так карточку увидят пары. Изменения ещё не сохранены.</span><a class="btn small" href="#cabinet" style="text-decoration:none">Вернуться в кабинет</a></div>`:""}
    <nav class="crumbs"><a href="#catalog" data-cat="all">Каталог</a><span>/</span><a href="#catalog" data-cat="${esc(v.cat)}">${esc(catName(v.cat))}</a></nav>
    <div class="vp">
      <div class="vp-main">
        <div class="ph vp-hero" id="vp-hero" style="${ph.length?`background-image:url('${blob(ph[0])}'),${grad(v.cat)}`:`background:${grad(v.cat)}`}">${tag?`<span class="tag">${tag}</span>`:""}${ph.length?"":esc(initials(v.name))}</div>
        ${ph.length>1?`<div class="vp-thumbs">${ph.map((p,i)=>`<button type="button" data-ph="${esc(p)}" aria-label="Фото ${i+1}" aria-pressed="${i===0}" style="background-image:url('${blob(p)}')"></button>`).join("")}</div>`:""}
        <div class="vp-head">
-         <span class="kicker">${esc(catName(v.cat))}</span>
-         <h1>${esc(v.name||"Название")}</h1>
+         <div class="vp-id">${avHtml(v,"lg")}<div><span class="kicker">${esc(catName(v.cat))}</span>
+         <h1>${esc(v.name||"Название")}</h1></div></div>
          ${v.short?`<p class="vp-short">${esc(v.short)}</p>`:""}
          ${v.price?`<span class="pricetag">${esc(v.price)}</span>`:""}
        </div>
@@ -756,6 +806,7 @@ function renderVendorPage(v,isPreview){
      </div>
      <aside class="vp-side">
        <div class="disc-big"><span class="pct">${pct(v)?"−"+pct(v)+"%":"—"}</span><b>${pct(v)?"Скидка по карте":"Скидка не указана"}</b><small>${esc((v.discount&&v.discount.cond)||"")}</small></div>
+       ${isPreview?"":fdForMe().filter(x=>x.vendorId===v.id).map(x=>`<div class="spec" style="border-left-color:var(--berry);background:var(--berry-soft)"><div class="kicker" style="color:var(--berry)">Ваша дата свободна · ${fmtDate(x.date)}</div><h3>${fmtRub(x.price)} ₽${x.oldPrice?` <s style="font-weight:400;color:var(--muted);font-size:15px">${fmtRub(x.oldPrice)} ₽</s>`:""}</h3><p>${esc(x.text||"Специальная цена на день вашей свадьбы. Свяжитесь с подрядчиком, чтобы забронировать.")}</p></div>`).join("")}
        ${hasSpec(v)?`<div class="spec"><div class="kicker">Спецпредложение · на условиях партнёра</div><h3>${esc(v.offer.title)}</h3><p>${esc((until+(v.offer.terms||"")).trim()||"Условия уточняйте у партнёра.")}</p></div>`:""}
        <div class="panel" style="gap:10px">
          <span class="kicker">Промокод</span>
@@ -778,7 +829,7 @@ $("#vp").addEventListener("click",e=>{
 
 /* ---------- writes ---------- */
 let pq=Promise.resolve();
-const SERVER_ERR={contacts_in_text:"Уберите телефон, ссылки и никнеймы. Контакты откроются после выбора исполнителя.",rate_limit_requests:"За сутки можно отправить не больше 3 заявок.",request_closed:"Заявка уже не принимает предложения.",request_hidden:"Эта заявка вам недоступна.",price:"Укажите цену целым числом в рублях или «Цена по запросу».",required_fields:"Заполните раздел, дату, город и описание.",forbidden:"Недостаточно прав для этого действия.",not_your_vendor:"Это действие доступно владельцу карточки.",role_vendor_only:"Это действие доступно только подрядчикам. Ваш аккаунт зарегистрирован как пара.",role_couple_only:"Это действие доступно только парам. Ваш аккаунт зарегистрирован как подрядчик.",offer_not_found:"Предложение не найдено. Обновите страницу.",too_large:"Слишком большой объём данных.",cannot_delete_published:"Опубликованную заявку нельзя удалить, её можно закрыть.",auth:"Войдите в аккаунт."};
+const SERVER_ERR={contacts_in_text:"Уберите телефон, ссылки и никнеймы. Контакты откроются после выбора исполнителя.",rate_limit_requests:"За сутки можно отправить не больше 3 заявок.",request_closed:"Заявка уже не принимает предложения.",request_hidden:"Эта заявка вам недоступна.",price:"Укажите цену целым числом в рублях или «Цена по запросу».",required_fields:"Заполните раздел, дату, город и описание.",forbidden:"Недостаточно прав для этого действия.",not_your_vendor:"Это действие доступно владельцу карточки.",role_vendor_only:"Это действие доступно только подрядчикам. Ваш аккаунт зарегистрирован как пара.",role_couple_only:"Это действие доступно только парам. Ваш аккаунт зарегистрирован как подрядчик.",vendor_not_approved:"Доступно после того, как организатор одобрит вашу карточку.",freedate_limit:"В этом месяце вы уже предложили 3 свободные даты. Новые можно будет добавить с 1-го числа.",freedate_past:"Дата должна быть не раньше сегодняшней.",old_price:"Обычная цена должна быть выше спеццены.",offer_not_found:"Предложение не найдено. Обновите страницу.",too_large:"Слишком большой объём данных.",cannot_delete_published:"Опубликованную заявку нельзя удалить, её можно закрыть.",auth:"Войдите в аккаунт."};
 function errText(e){if(e&&e.message){const k=String(e.message).split(":")[0];if(SERVER_ERR[k])return SERVER_ERR[k];if(k.startsWith("bad_transition"))return"Это действие сейчас недоступно для заявки. Обновите страницу.";if(k.startsWith("too_long"))return"Текст слишком длинный.";if(/[а-яё]/i.test(e.message))return e.message}const c=e&&e.code;
   if(c==="invalid_argument")return"Нет прав на сохранение. Попросите организатора открыть вам доступ к порталу.";
   if(c==="quota_exceeded")return"Хранилище портала заполнено. Сообщите организатору.";
@@ -795,7 +846,7 @@ function renderCouple(){
   $("#cc-num").textContent=p.card||"Карта не оформлена";$("#cc-name").textContent=p.names||"Имена пары";
   $("#cc-date").textContent=p.date?new Date(p.date).toLocaleDateString("ru-RU"):"дата свадьбы";
   $("#c-save").textContent=p.card?"Сохранить":"Сохранить и оформить карту";
-  renderQR(p.card);
+  renderQR(p.card);if(typeof renderFree==="function")renderFree();
 }
 function renderQR(num){
   const box=$("#qr");$("#qr-code").hidden=!num;if(!num){box.innerHTML=`<span class="note">QR-код появится после оформления карты</span>`;return}
@@ -813,28 +864,45 @@ $("#coupleform").addEventListener("submit",async e=>{e.preventDefault();
   $("#c-msg").className="msg "+(ok?"ok":"err");$("#c-msg").textContent=ok?"Сохранено. Номер карты: "+p.card:"";renderCouple()});
 
 /* ---------- vendor cabinet ---------- */
-let editingId=null,edPhotos=[],vfDirty=false;
+let editingId=null,edPhotos=[],edAvatar="",vfDirty=false;
 $("#vf-cat").innerHTML=`<option value="">Выберите раздел</option>`+Object.keys(GROUPS).map(g=>`<optgroup label="${GROUPS[g]}">${CATS.filter(c=>c.g===g).map(c=>`<option value="${c.id}">${c.n}</option>`).join("")}</optgroup>`).join("");
 const F=k=>$("#vf-"+k);
 function loadVendorForm(id){
-  editingId=id;const v=liveVendors.find(x=>x.id===id)||{};const d=v.discount||{},o=v.offer||{},c=v.contacts||{};
+  const same=id===editingId;editingId=id;const v=liveVendors.find(x=>x.id===id)||{};const d=v.discount||{},o=v.offer||{},c=v.contacts||{};
   F("name").value=v.name||"";F("cat").value=v.cat||"";F("short").value=v.short||"";F("about").value=v.about||"";F("price").value=v.price||"";
   F("pct").value=d.pct||"";F("cond").value=d.cond||"";F("code").value=v.promo||"";
   F("offer").value=o.title||"";F("terms").value=o.terms||"";F("until").value=o.until||"";
   F("phone").value=c.phone||"";F("vk").value=c.vk||"";F("tg").value=c.tg||"";F("site").value=c.site||"";F("addr").value=c.addr||"";
-  F("cities").value=v.cities||"";F("vis").checked=v.visible!==false;edPhotos=[...(v.photos||[])];vfDirty=false;
+  F("cities").value=v.cities||"";F("vis").checked=v.visible!==false;edPhotos=[...(v.photos||[])];edAvatar=v.avatar||"";vfDirty=false;
   const own=id===UID;
   $("#vf-title").textContent=own?"Моя карточка партнёра":(v.name?"Карточка: "+v.name:"Новый партнёр");
-  $("#vf-status").textContent=v.name?(v.visible===false?"Скрыта из каталога":"Опубликована"):"Не опубликована";
+  modView(v);
   $("#vf-vis-wrap").hidden=!IS_OWNER;$("#vf-del").hidden=!(v.name&&(IS_OWNER||own));
-  $("#vf-msg").textContent="";renderPhotos();renderPreview();
+  if(!same)$("#vf-msg").textContent="";renderPhotos();renderAvatarEdit();renderPreview();
 }
+function modView(v){const st=$("#vf-status"),n=$("#vf-mod"),sv=$("#vf-save");st.className="pill";n.hidden=true;n.className="mod-note";
+  if(!v.name){st.textContent="Не опубликована";sv.textContent=IS_OWNER?"Сохранить и опубликовать":"Отправить на модерацию";
+    if(!IS_OWNER){n.hidden=false;n.textContent="После отправки карточку проверит организатор портала. Как только он её одобрит, она появится в каталоге, а вам откроются заявки пар, свободные даты и проверка карт."}return}
+  if(v.mod==="pending"){st.textContent="На модерации";st.classList.add("wait");n.hidden=false;n.classList.add("wait");
+    n.textContent=IS_OWNER?"Карточка ждёт проверки. Одобрить или отклонить её можно во вкладке «Организатор».":"Карточка на проверке у организатора. Пары увидят её в каталоге после одобрения. Вы можете продолжать её редактировать.";sv.textContent=IS_OWNER?"Сохранить":"Сохранить и отправить на модерацию";return}
+  if(v.mod==="rejected"){st.textContent="Отклонена";st.classList.add("bad");n.hidden=false;n.classList.add("bad");
+    n.textContent="Организатор вернул карточку на доработку"+(v.modNote?": «"+v.modNote+"»":"")+". Исправьте и отправьте снова.";sv.textContent=IS_OWNER?"Сохранить":"Отправить на модерацию повторно";return}
+  st.textContent=v.visible===false?"Скрыта из каталога":"Опубликована";sv.textContent="Сохранить и опубликовать"}
+function renderAvatarEdit(){const a=$("#vf-av");if(!a)return;a.style.backgroundImage=edAvatar?`url('${blob(edAvatar)}')`:"";a.textContent=edAvatar?"":"нет фото";$("#vf-avdel").hidden=!edAvatar;$("#vf-avbtn").textContent=edAvatar?"Заменить":"Загрузить аватар"}
+$("#vf-avdel").onclick=()=>{edAvatar="";vfDirty=true;renderAvatarEdit();renderPreview()};
+$("#vf-avbtn").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#vf-avfile").click()}});
+$("#vf-avfile").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+  if(!ASSETS){toast("Загрузка фото доступна после входа");return}
+  if(f.size>10*1024*1024){toast("Файл больше 10 МБ");return}
+  $("#vf-msg").className="msg";$("#vf-msg").textContent="Загружаю аватар…";
+  try{const r=await ASSETS.upload(f);edAvatar=r.id;vfDirty=true;renderAvatarEdit();renderPreview();$("#vf-msg").textContent="Аватар загружен. Не забудьте сохранить карточку."}
+  catch(err){$("#vf-msg").textContent="";toast(err&&err.message?err.message:"Не удалось загрузить аватар")}});
 function formVendor(){
   return{name:F("name").value.trim(),cat:F("cat").value,short:F("short").value.trim(),about:F("about").value.trim(),price:F("price").value.trim(),
     discount:{pct:Math.max(0,Math.min(90,parseInt(F("pct").value)||0)),cond:F("cond").value.trim()},promo:F("code").value.trim().toUpperCase(),
     offer:{title:F("offer").value.trim(),terms:F("terms").value.trim(),until:F("until").value},
     contacts:{phone:F("phone").value.trim(),vk:F("vk").value.trim(),tg:F("tg").value.trim(),site:F("site").value.trim(),addr:F("addr").value.trim()},
-    cities:F("cities").value.trim(),photos:[...edPhotos],visible:IS_OWNER?F("vis").checked:true}}
+    cities:F("cities").value.trim(),photos:[...edPhotos],avatar:edAvatar,visible:IS_OWNER?F("vis").checked:true}}
 function renderPreview(){const v={id:editingId||"new",...formVendor()};$("#vf-preview").innerHTML=vcard(v,false)}
 function renderPhotos(){
   $("#vf-photos").innerHTML=edPhotos.map((p,i)=>`<div class="photo" style="background-image:url('${blob(p)}')">${i===0?'<span class="cv">Обложка</span>':""}<button type="button" class="x" data-i="${i}" aria-label="Удалить фото">×</button></div>`).join("")
@@ -863,8 +931,12 @@ $("#vform").addEventListener("submit",async e=>{e.preventDefault();
   if(!DB||!editingId){m.textContent="Сохранение доступно на опубликованной странице после входа.";return}
   const prev=liveVendors.find(x=>x.id===editingId)||{};
   const doc={...v,owner:prev.owner||(editingId===UID?UID:""),createdAt:prev.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
+  if(IS_OWNER&&prev.mod){doc.mod=prev.mod;if(prev.modAt)doc.modAt=prev.modAt;if(prev.modNote)doc.modNote=prev.modNote;if(prev.submittedAt)doc.submittedAt=prev.submittedAt}
+  const wasApproved=!!prev.name&&approved(prev);
   $("#vf-save").disabled=true;
-  try{await DB.doc("vendors/"+editingId).set(doc);vfDirty=false;m.className="msg ok";m.textContent="Сохранено. Карточка обновлена в каталоге.";$("#vf-status").textContent=doc.visible===false?"Скрыта из каталога":"Опубликована";$("#vf-del").hidden=false}
+  try{await DB.doc("vendors/"+editingId).set(doc);vfDirty=false;m.className="msg ok";
+    const pend=!IS_OWNER&&!wasApproved;m.textContent=pend?"Отправлено на модерацию. Организатор проверит карточку, обычно в течение суток.":"Сохранено. Карточка обновлена в каталоге.";
+    modView(pend?{...doc,mod:"pending"}:{...doc,mod:doc.mod||"approved"});$("#vf-del").hidden=false}
   catch(err){m.textContent=errText(err)}
   $("#vf-save").disabled=false;
 });
@@ -875,15 +947,62 @@ $("#vf-del").onclick=async()=>{
   try{await DB.doc("vendors/"+editingId).delete();toast("Карточка удалена");if(IS_OWNER&&editingId!==UID){setTab("admin")}else loadVendorForm(UID)}catch(err){toast(errText(err))}
 };
 
+/* ---------- свободные даты подрядчиков ---------- */
+var FD={};
+function todayStr(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+var FD_LIMIT=3;
+function fdForMe(){const d=profile&&profile.date;if(!d||d<todayStr())return[];const out=[];
+  for(const [uid,doc] of Object.entries(FD))if(uid!==UID)((doc&&doc.items)||[]).forEach(x=>{if(x.status==="active"&&x.date===d)out.push(x)});
+  return out.sort((a,b)=>a.price-b.price)}
+function fdUsed(){const m=todayStr().slice(0,7);return(((FD[UID]||{}).log)||[]).filter(t=>{const d=new Date(t);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")===m}).length}
+function fdRow(x,own){const past=x.date<todayStr();return`<div class="fd ${x.status!=="active"||past?"closed":""}"><div class="fd-top"><b>${own?fmtDate(x.date):esc(x.vendorName||"Подрядчик")+" · "+esc(catName(x.cat))}</b><span class="fd-price">${fmtRub(x.price)} ₽${x.oldPrice?`<s>${fmtRub(x.oldPrice)} ₽</s>`:""}</span></div>
+  ${x.text?`<p>${esc(x.text)}</p>`:""}
+  <div class="row" style="justify-content:space-between">${own?`<span class="note">${x.status!=="active"?"Снята с публикации":past?"Дата прошла":"Опубликована "+fmtDate(x.createdAt)}</span>${x.status==="active"&&!past?`<button class="btn ghost small" type="button" data-fdclose="${esc(x.id)}">Снять</button>`:""}`:`<span class="note">Предложение на ${fmtDate(x.date)}</span><a class="btn small" href="#p-${esc(x.vendorId)}" style="text-decoration:none">Страница подрядчика</a>`}</div></div>`}
+function renderFree(){
+  const cl=$("#fd-couple");if(cl){const l=fdForMe();cl.hidden=!l.length;if(l.length)$("#fd-clist").innerHTML=l.map(x=>fdRow(x,false)).join("")}
+  const box=$("#fd-list");if(!box)return;const v=actingVendor(),mine=((FD[UID]||{}).items)||[],used=fdUsed(),left=Math.max(0,FD_LIMIT-used);
+  $("#fd-date").min=todayStr();
+  const ok=v&&approved(v)&&!IS_OWNER;$("#fd-save").disabled=!ok||!left;
+  $("#fd-left").innerHTML=IS_OWNER?"Организатор видит все свободные даты подрядчиков ниже.":!v?"Сначала заполните карточку во вкладке «Моя карточка».":!approved(v)?"Свободные даты станут доступны после одобрения вашей карточки.":`В этом месяце можно предложить ещё <b>${left} из ${FD_LIMIT}</b>${left?"":". Новые появятся 1-го числа"}.`;
+  const list=IS_OWNER?Object.values(FD).flatMap(d=>(d&&d.items)||[]):mine;
+  box.innerHTML=list.length?[...list].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).map(x=>IS_OWNER?fdRow({...x},false).replace("Предложение на","Дата"):fdRow(x,true)).join(""):`<div class="empty" style="min-height:120px">Вы ещё не предлагали свободных дат.</div>`}
+$("#fdform").addEventListener("submit",async e=>{e.preventDefault();const m=$("#fd-msg");m.className="msg err";const v=actingVendor();
+  const date=$("#fd-date").value,price=parseInt($("#fd-price").value),old=parseInt($("#fd-old").value)||"",text=$("#fd-text").value.trim();
+  if(!v){m.textContent="Сначала заполните карточку.";return}
+  if(!date||date<todayStr()){m.textContent="Укажите дату не раньше сегодняшней.";$("#fd-date").focus();return}
+  if(!(price>0)){m.textContent="Укажите спеццену в рублях.";$("#fd-price").focus();return}
+  if(old&&old<=price){m.textContent="Обычная цена должна быть выше спеццены.";$("#fd-old").focus();return}
+  if(fdUsed()>=FD_LIMIT){m.textContent="Лимит "+FD_LIMIT+" свободные даты в месяц исчерпан.";return}
+  const cur=((FD[UID]||{}).items)||[];if(cur.some(x=>x.date===date&&x.status==="active")){m.textContent="На эту дату у вас уже есть предложение.";return}
+  const item={id:Math.random().toString(36).slice(2,10)+Date.now().toString(36),vendorId:v.id,date,price,oldPrice:old,text,status:"active"};
+  $("#fd-save").disabled=true;
+  try{await DB.doc("freedates/"+UID).set({items:[...cur,item]});m.className="msg ok";m.textContent="Опубликовано. Пары с этой датой свадьбы получат уведомление.";$("#fdform").reset()}
+  catch(err){m.textContent=errText(err)}renderFree()});
+$("#fd-list").addEventListener("click",async e=>{const b=e.target.closest("[data-fdclose]");if(!b)return;const cur=((FD[UID]||{}).items)||[];
+  try{await DB.doc("freedates/"+UID).set({items:cur.map(x=>x.id===b.dataset.fdclose?{...x,status:"closed"}:x)});toast("Свободная дата снята с публикации")}catch(err){toast(errText(err))}});
+
 /* ---------- admin ---------- */
 function renderAdmin(){
   if(!IS_OWNER)return;
+  const pend=liveVendors.filter(v=>v.mod==="pending").sort((a,b)=>String(a.submittedAt).localeCompare(String(b.submittedAt)));
+  $("#ad-mod-n").hidden=!pend.length;$("#ad-mod-n").textContent=pend.length;
+  $("#ad-modlist").innerHTML=pend.length?pend.map(v=>`<div class="li" data-mid="${esc(v.id)}"><div class="th" style="${v.avatar?`background:url('${blob(v.avatar)}') center/cover`:bgFor(v)}">${v.avatar||v.photos&&v.photos.length?"":esc(initials(v.name))}</div>
+    <div style="min-width:0"><b>${esc(v.name)}</b><span>${esc(catName(v.cat))} · −${pct(v)}% · фото ${(v.photos||[]).length} · отправлена ${fmtDate(v.submittedAt)}${v.prevModNote?" · повторно после отказа":""}</span>
+    <div class="row mod-rej" hidden style="margin-top:8px"><input class="mod-reason" maxlength="300" placeholder="Что исправить (увидит подрядчик)" style="flex:1 1 220px;min-height:40px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--bg)"><button class="btn danger small" type="button" data-mod="reject-go">Отклонить</button></div></div>
+    <div class="row" style="justify-content:flex-end"><a class="btn ghost small" href="#p-${esc(v.id)}" style="text-decoration:none">Открыть</a><button class="btn ghost small" type="button" data-mod="reject">Отклонить…</button><button class="btn small" type="button" data-mod="ok">Одобрить</button></div></div>`).join("")
+    :`<div class="empty" style="min-height:90px">Новых карточек на проверке нет.</div>`;
   const l=[...liveVendors].sort((a,b)=>String(a.name).localeCompare(String(b.name),"ru"));
   $("#adlist").innerHTML=l.length?l.map(v=>`<div class="li"><div class="th" style="${bgFor(v)}">${v.photos&&v.photos.length?"":esc(initials(v.name))}</div>
-    <div style="min-width:0"><b>${esc(v.name||"Без названия")}</b><span>${esc(catName(v.cat))} · −${pct(v)}% · ${v.visible===false?"скрыта":"в каталоге"} · ${v.demo?"демо-карточка":v.owner?"ведёт партнёр":"создана организатором"}</span></div>
+    <div style="min-width:0"><b>${esc(v.name||"Без названия")}</b><span>${esc(catName(v.cat))} · −${pct(v)}% · ${v.mod==="pending"?"на модерации":v.mod==="rejected"?"отклонена":v.visible===false?"скрыта":"в каталоге"} · ${v.demo?"демо-карточка":v.owner?"ведёт партнёр":"создана организатором"}</span></div>
     <button class="btn ghost small" data-edit="${esc(v.id)}" type="button">Редактировать</button></div>`).join("")
     :`<div class="empty" style="padding:24px">Партнёров пока нет. Добавьте первого или попросите партнёров заполнить карточку в кабинете подрядчика.</div>`;
 }
+$("#ad-modlist").addEventListener("click",async e=>{const b=e.target.closest("[data-mod]");if(!b)return;const row=b.closest("[data-mid]"),id=row.dataset.mid;
+  if(b.dataset.mod==="reject"){const r=row.querySelector(".mod-rej");r.hidden=!r.hidden;if(!r.hidden)r.querySelector("input").focus();return}
+  const v=liveVendors.find(x=>x.id===id);if(!v)return;const {id:_,...doc}=v;
+  if(b.dataset.mod==="reject-go"){const note=row.querySelector(".mod-reason").value.trim();if(!note){toast("Напишите, что исправить");return}doc.mod="rejected";doc.modNote=note}else{doc.mod="approved";delete doc.modNote}
+  doc.modAt=new Date().toISOString();delete doc.prevModNote;b.disabled=true;
+  try{await DB.doc("vendors/"+id).set(JSON.parse(JSON.stringify(doc)));toast(doc.mod==="approved"?"Карточка одобрена и появилась в каталоге":"Карточка возвращена подрядчику")}catch(err){toast(errText(err));b.disabled=false}});
 $("#adlist").addEventListener("click",e=>{const b=e.target.closest("[data-edit]");if(b){setTab("vendor",b.dataset.edit)}});
 $("#ad-new").onclick=()=>{if(!DB)return;setTab("vendor",DB.collection("vendors").doc().id)};
 
@@ -892,12 +1011,12 @@ let curTab=lsGet("sd-tab","couple");
 function setTab(t,editId){
   if(!tabAllowed(t))t=ROLE_TABS[ROLE]?ROLE_TABS[ROLE][0]:"couple";curTab=t;
   document.querySelectorAll(".tabs button").forEach(b=>{if(b.id!=="tab-admin")b.hidden=!tabAllowed(b.dataset.t)});
-  if(ROLE_TABS[ROLE]){const lb={couple:"Моя карта",requests:"Мои заявки",vendor:"Моя карточка",leads:"Заявки пар",clients:"Проверка карт"};document.querySelectorAll(".tabs button").forEach(b=>{if(lb[b.dataset.t]&&b.firstChild)b.firstChild.textContent=lb[b.dataset.t]})}lsSet("sd-tab",t==="admin"?"vendor":t);
+  if(ROLE_TABS[ROLE]){const lb={couple:"Моя карта",requests:"Мои заявки",vendor:"Моя карточка",leads:"Заявки пар",free:"Свободные даты",clients:"Проверка карт"};document.querySelectorAll(".tabs button").forEach(b=>{if(lb[b.dataset.t]&&b.firstChild)b.firstChild.textContent=lb[b.dataset.t]})}lsSet("sd-tab",t==="admin"?"vendor":t);
   document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===t));
-  ["couple","requests","vendor","leads","clients","admin"].forEach(x=>$("#t-"+x).hidden=x!==t);
-  $("#cab-lead").textContent=!UID&&window.SD_SERVER?"Войдите или зарегистрируйтесь. Это бесплатно для пар и партнёров.":t==="couple"?(LIVE?"Ваша дисконтная карта и данные свадьбы. Видны только вам.":"Ваша карта и данные свадьбы. В этом макете данные сохраняются только в вашем браузере."):t==="vendor"?"Заполните карточку: её увидят пары в вашем разделе каталога. Изменения появляются сразу после сохранения.":t==="clients"?"Проверяйте карты пар и отмечайте, когда применили скидку или спецпредложение.":t==="requests"?"Ваши запросы подрядчикам и их предложения. Всё бесплатно.":t==="leads"?"Заявки пар в вашем разделе и персональные приглашения. Отклик бесплатный.":"Статистика по карте и управление карточками всех партнёров.";
+  ["couple","requests","vendor","leads","free","clients","admin"].forEach(x=>$("#t-"+x).hidden=x!==t);
+  $("#cab-lead").textContent=!UID&&window.SD_SERVER?"Войдите или зарегистрируйтесь. Это бесплатно для пар и партнёров.":t==="couple"?(LIVE?"Ваша дисконтная карта и данные свадьбы. Видны только вам.":"Ваша карта и данные свадьбы. В этом макете данные сохраняются только в вашем браузере."):t==="vendor"?"Заполните карточку: её увидят пары в вашем разделе каталога. Изменения появляются сразу после сохранения.":t==="clients"?"Проверяйте карты пар и отмечайте, когда применили скидку или спецпредложение.":t==="requests"?"Ваши запросы подрядчикам и их предложения. Всё бесплатно.":t==="leads"?"Заявки пар в вашем разделе и персональные приглашения. Отклик бесплатный.":t==="free"?"Предложите освободившуюся дату со спецценой: пары с этой датой свадьбы получат уведомление.":"Статистика по карте и управление карточками всех партнёров.";
   if(t==="vendor")loadVendorForm(editId||UID);
-  if(t==="admin")renderAdmin();
+  if(t==="admin")renderAdmin();if(t==="free")renderFree();
   renderQRViews();if(typeof renderBroker==="function")renderBroker();if(t==="leads")setTimeout(leadsSeen,4000);
 }
 document.querySelector(".tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b)setTab(b.dataset.t)});
@@ -1084,7 +1203,10 @@ function notifList(){const out=[],v=actingVendor();
     const mine=offersFor(r.id).find(o=>o.vendorId===v.id);
     if(mine&&r.selectedAt)out.push({at:r.selectedAt,href:"#req-"+r.id,text:r.selectedOfferId===mine.id?"Пара выбрала ваше предложение":"По заявке № "+shortId(r.id)+" выбран другой исполнитель"});
     allMsgs().filter(m=>m.requestId===r.id&&m.vendorId===v.id&&m.from==="couple").forEach(m=>out.push({at:m.at,href:"#req-"+r.id,text:"Сообщение от пары по заявке № "+shortId(r.id)}))})}
-  if(IS_OWNER){allReqs().filter(r=>r.status==="pending_review").forEach(r=>out.push({at:r.submittedAt||r.updatedAt,href:"#req-"+r.id,text:"На модерации: заявка № "+shortId(r.id)+" ("+catName(r.categoryId)+")"}));
+  if(v&&v.modAt&&!IS_OWNER){if(v.mod==="approved")out.push({at:v.modAt,href:"#cabinet",text:"Карточка одобрена и опубликована в каталоге"});else if(v.mod==="rejected")out.push({at:v.modAt,href:"#cabinet",text:"Карточка возвращена на доработку"+(v.modNote?": "+v.modNote:"")})}
+  fdForMe().forEach(x=>out.push({at:x.createdAt,href:"#p-"+x.vendorId,text:`Свободна дата вашей свадьбы: ${x.vendorName||"подрядчик"} (${catName(x.cat)}) — ${fmtRub(x.price)} ₽`}));
+  if(IS_OWNER){liveVendors.filter(x=>x.mod==="pending").forEach(x=>out.push({at:x.submittedAt,href:"#p-"+x.id,text:"Карточка на модерации: "+(x.name||"без названия")}));
+    allReqs().filter(r=>r.status==="pending_review").forEach(r=>out.push({at:r.submittedAt||r.updatedAt,href:"#req-"+r.id,text:"На модерации: заявка № "+shortId(r.id)+" ("+catName(r.categoryId)+")"}));
     Object.values(BR.complaints).forEach(d=>((d&&d.items)||[]).forEach(c=>out.push({at:c.at,href:"#req-"+c.requestId,text:"Жалоба на заявку № "+shortId(c.requestId)})))}
   const seen=seenAt("all");return out.filter(n=>n.at).sort((a,b)=>String(b.at).localeCompare(String(a.at))).map(n=>({...n,unread:String(n.at)>seen})).slice(0,30)}
 function renderNotif(){const box=$("#notif");if(!box||!UID)return;const l=notifList(),un=l.filter(n=>n.unread).length;
@@ -1095,7 +1217,7 @@ function renderNotif(){const box=$("#notif");if(!box||!UID)return;const l=notifL
 function tabBadges(){const set=(t,n)=>{const b=document.querySelector(`.tabs button[data-t="${t}"]`);if(!b)return;b.querySelector(".cnt")?.remove();if(n)b.insertAdjacentHTML("beforeend",` <span class="cnt">${n}</span>`)};
   let nc=0;myReqs().forEach(r=>{const s=seenAt("req-"+r.id);nc+=offersFor(r.id).filter(o=>String(o.updatedAt)>s).length+allMsgs().filter(m=>m.requestId===r.id&&m.from==="vendor"&&String(m.at)>s).length});set("requests",nc);
   const v=actingVendor();let nv=0;if(v){const s=seenAt("leads");nv=allReqs().filter(r=>visibleToVendor(r,v)&&reqStatus(r)==="open"&&String(r.publishedAt||"")>s&&!offersFor(r.id).some(o=>o.vendorId===v.id)).length}set("leads",nv);
-  if(IS_OWNER)set("admin",allReqs().filter(r=>r.status==="pending_review").length)}
+  set("free",0);if(IS_OWNER)set("admin",allReqs().filter(r=>r.status==="pending_review").length+liveVendors.filter(v=>v.mod==="pending").length)}
 
 /* ---------- Публичный экран #broker ---------- */
 function renderBrokerPublic(){const n=allReqs().filter(r=>["open","selected"].includes(reqStatus(r))).length;
@@ -1351,7 +1473,8 @@ let leadsMode="open";
 function renderLeads(){const box=$("#leads");if(!box)return;const v=actingVendor();
   $("#ld-act-wrap").hidden=!IS_OWNER;if(IS_OWNER){const cur=lsGet("sd-act-vendor","");$("#ld-act").innerHTML=`<option value="">Выберите партнёра</option>`+[...liveVendors].sort((a,b)=>String(a.name).localeCompare(String(b.name),"ru")).map(x=>`<option value="${esc(x.id)}" ${x.id===cur?"selected":""}>${esc(x.name)}</option>`).join("")}
   document.querySelectorAll("#ld-seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===leadsMode));
-  if(!v){box.innerHTML=`<div class="empty" style="min-height:140px">Заявки видят подрядчики с карточкой в каталоге. Заполните её во вкладке «Подрядчик».</div>`;return}
+  if(!v){box.innerHTML=`<div class="empty" style="min-height:140px">Заявки видят подрядчики с карточкой в каталоге. Заполните её во вкладке «Моя карточка».</div>`;return}
+  if(!approved(v)){box.innerHTML=`<div class="empty" style="min-height:140px">Заявки пар откроются, когда организатор одобрит вашу карточку.</div>`;return}
   const city=$("#ld-city").value;
   let l=allReqs().filter(r=>visibleToVendor(r,v));
   if(leadsMode==="open")l=l.filter(r=>r.mode==="tender"&&reqStatus(r)==="open");
@@ -1540,6 +1663,7 @@ async function startServer(){
   $("#tab-admin").hidden=!IS_OWNER;cabState();renderPhotos();accountBar();adminTools();
   DB.doc("data/users/"+UID+"/profile").onSnapshot(s=>{profile=s.exists?JSON.parse(JSON.stringify(s.data())):{};renderCouple();renderQRViews();ensureCardDoc()});
   ["requests","offers","messages"].forEach(col=>DB.collection(col).onSnapshot(s=>{BR[col]={};s.docs.forEach(d=>BR[col][d.id]=d.data());renderBroker()}));
+  DB.collection("freedates").onSnapshot(s=>{FD={};s.docs.forEach(d=>FD[d.id]=d.data());renderFree();renderBroker();if(location.hash.startsWith("#p-"))renderVendorPage(findV(location.hash.slice(3)),false)});
   DB.collection("redemptions").onSnapshot(s=>{QR.reds={};s.docs.forEach(d=>QR.reds[d.id]=d.data());renderQRViews()});
   if(IS_OWNER){DB.collection("complaints").onSnapshot(s=>{BR.complaints={};s.docs.forEach(d=>BR.complaints[d.id]=d.data());renderBroker()});
     DB.collection("cards").onSnapshot(s=>{QR.cards={};s.docs.forEach(d=>QR.cards[d.id]=d.data());renderQRViews()});

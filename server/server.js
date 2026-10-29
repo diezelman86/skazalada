@@ -73,9 +73,13 @@ function listCol(col) { return db.prepare("SELECT id,data FROM docs WHERE col=?"
 const itemsOf = d => (d && Array.isArray(d.items)) ? d.items : [];
 
 /* ---------- контекст пользователя ---------- */
-function ctxFor(user) { if (!user) return { uid: null, isAdmin: false, vendorIds: new Set(), vendorCats: new Set() };
+const isApproved = v => !v || !v.mod || v.mod === "approved"; // карточки без поля mod — созданы до премодерации
+function ctxFor(user) { if (!user) return { uid: null, isAdmin: false, vendorIds: new Set(), ownVendorIds: new Set(), vendorCats: new Set() };
   const vs = listCol("vendors").filter(v => v.id === user.id || (v.data && v.data.owner === user.id));
-  return { uid: user.id, email: user.email, isAdmin: user.isAdmin, role: user.role, vendorIds: new Set(vs.map(v => v.id)), vendorCats: new Set(vs.map(v => v.data.cat)) }; }
+  const ok = vs.filter(v => isApproved(v.data)); // заявки, отклики и проверка карт — только после модерации карточки
+  return { uid: user.id, email: user.email, isAdmin: user.isAdmin, role: user.role, ownVendorIds: new Set(vs.map(v => v.id)), vendorIds: new Set(ok.map(v => v.id)), vendorCats: new Set(ok.map(v => v.data.cat)) }; }
+const today = () => new Date(Date.now() + 3 * 36e5).toISOString().slice(0, 10); // по Москве
+function coupleDate(uid) { const p = getDoc("data/users/" + uid + "/profile"); const c = getDoc("cards/" + uid); return (p && p.date) || (c && c.date) || ""; }
 function allRequests() { const out = []; for (const d of listCol("requests")) for (const r of itemsOf(d.data)) out.push({ ...r, coupleUid: d.id }); return out; }
 function findRequest(id) { return allRequests().find(r => r.id === id) || null; }
 function reqStatus(r) { if (r.status === "open" && r.deadlineAt && Date.now() > Date.parse(r.deadlineAt)) return "expired"; return r.status; }
@@ -94,7 +98,11 @@ function sanitizeRequestForVendor(r) { const { favs, history, autoExpand, ...res
 function readFilter(segs, data, ctx) {
   const col = segs.slice(0, -1).join("/"), id = segs.at(-1), top = segs[0];
   if (ctx.isAdmin) return data;
-  if (top === "vendors" && segs.length === 2) { if (data.visible === false && !ctx.vendorIds.has(id)) return null; return data; }
+  if (top === "vendors" && segs.length === 2) { if ((data.visible === false || !isApproved(data)) && !ctx.ownVendorIds.has(id)) return null; return data; }
+  if (top === "freedates") { if (id === ctx.uid) return data; if (!ctx.uid) return null;
+    // свободная дата подрядчика видна только паре, у которой свадьба в этот день
+    const d = coupleDate(ctx.uid); if (!d || d < today()) return null;
+    const its = itemsOf(data).filter(x => x.status === "active" && x.date === d); return its.length ? { items: its } : null; }
   if (top === "data" && segs[1] === "users") return segs[2] === ctx.uid ? data : null;
   if (!ctx.uid) return null;
   if (top === "cards" || top === "complaints") return id === ctx.uid ? data : null;
@@ -122,18 +130,40 @@ function validateWrite(segs, data, prev, ctx) {
   if (!ctx.uid) return "auth";
   if (data !== null && (typeof data !== "object" || Array.isArray(data))) return "shape";
   if (JSON.stringify(data || {}).length > 256 * 1024) return "too_large";
-  if (ctx.isAdmin) return null;
+  if (ctx.isAdmin) { if (top === "vendors" && data && !data.mod) data.mod = "approved"; return null; }
   // разделение ролей: подрядчик ведёт карточку, отмечает карты и отвечает на заявки; пара оформляет карту и размещает заявки
-  const need = { vendors: "vendor", offers: "vendor", redemptions: "vendor", cards: "couple", requests: "couple", complaints: "couple" }[top];
+  const need = { vendors: "vendor", offers: "vendor", redemptions: "vendor", freedates: "vendor", cards: "couple", requests: "couple", complaints: "couple" }[top];
   if (need && ctx.role !== need) return need === "vendor" ? "role_vendor_only" : "role_couple_only";
   if (top === "data" && segs[1] === "users") return segs[2] === ctx.uid && segs.length === 4 ? null : "forbidden";
   if (top === "vendors") { if (segs.length !== 2) return "forbidden";
     if (id !== ctx.uid && !(prev && prev.owner === ctx.uid)) return "forbidden";
-    if (data) { data.owner = ctx.uid; delete data.demo; if (prev && prev.visible === false) data.visible = false; else data.visible = true; }
+    if (data) { data.owner = ctx.uid; delete data.demo; if (prev && prev.visible === false) data.visible = false; else data.visible = true;
+      // премодерация: новая или отклонённая карточка уходит организатору на проверку; одобренная обновляется сразу
+      if (prev && isApproved(prev)) { data.mod = "approved"; if (prev.modAt) data.modAt = prev.modAt; delete data.modNote; }
+      else { data.mod = "pending"; data.submittedAt = nowIso(); if (prev && prev.modAt) data.modAt = prev.modAt; if (prev && prev.modNote) data.prevModNote = prev.modNote; delete data.modNote; }
+      if (data.avatar != null && typeof data.avatar !== "string") return "shape"; }
     return null; }
   if (top === "cards") { if (segs.length !== 2 || id !== ctx.uid) return "forbidden"; if (data) { delete data.blocked; } return null; }
   if (top === "blocks") return "forbidden";
   if (top === "complaints") return segs.length === 2 && id === ctx.uid ? null : "forbidden";
+  if (top === "freedates") { if (segs.length !== 2 || id !== ctx.uid) return "forbidden";
+    if (data === null) return "forbidden";
+    const prevById = new Map(itemsOf(prev).map(x => [x.id, x])), items = itemsOf(data);
+    if (items.length > 30) return "too_large";
+    const month = today().slice(0, 7); const log = ((prev && prev.log) || []).filter(d => String(d) >= new Date(Date.now() - 62 * 864e5).toISOString());
+    for (const x of items) { const p = prevById.get(x.id);
+      if (!x.id || !SEG.test(String(x.id))) return "bad_id";
+      if (!ctx.vendorIds.has(x.vendorId)) return "vendor_not_approved";
+      if (!["active", "closed"].includes(x.status)) return "shape";
+      if (typeof x.text === "string" && x.text.length > 400) return "too_long:text";
+      if (!(Number.isInteger(x.price) && x.price > 0 && x.price < 1e8)) return "price";
+      if (x.oldPrice != null && x.oldPrice !== "" && !(Number.isInteger(x.oldPrice) && x.oldPrice > x.price)) return "old_price";
+      const v = getDoc("vendors/" + x.vendorId) || {}; x.vendorName = v.name || ""; x.cat = v.cat || "";
+      if (p) { x.date = p.date; x.createdAt = p.createdAt; continue; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(x.date)) || x.date < today()) return "freedate_past";
+      if (log.filter(d => d.slice(0, 7) === month).length >= 3) return "freedate_limit";
+      x.createdAt = nowIso(); x.status = "active"; log.push(x.createdAt); }
+    data.log = log; return null; }
   if (["redemptions", "requests", "offers", "messages"].includes(top)) { if (segs.length !== 2 || id !== ctx.uid) return "forbidden"; }
   else return "forbidden";
   if (data === null) return top === "requests" && itemsOf(prev).some(r => r.status !== "draft") ? "forbidden" : null;
@@ -277,7 +307,7 @@ async function api(req, res, url) {
     if (segs[0] === "cards" && !ctx.isAdmin) { // проверка карты по номеру: только партнёрам с карточкой каталога
       let where = []; try { where = JSON.parse(url.searchParams.get("where") || "[]"); } catch {}
       const w = where.find(x => x[0] === "num" && (x[1] === "==" || x[1] === "eq")); if (!w || !ctx.uid) return send(res, 200, { docs: [] });
-      if (!ctx.vendorIds.size) return err(res, 403, "invalid_argument", "Проверять карты могут партнёры с карточкой в каталоге");
+      if (!ctx.vendorIds.size) return err(res, 403, "invalid_argument", ctx.ownVendorIds.size ? "Проверять карты можно после того, как организатор одобрит вашу карточку" : "Проверять карты могут партнёры с карточкой в каталоге");
       if (limited("chk:" + ctx.uid, 60, 36e5)) return err(res, 429, "resource_exhausted", "Слишком много проверок за час");
       const hit = listCol("cards").find(d => d.data && d.data.num === w[2]);
       return send(res, 200, { docs: hit ? [{ id: hit.id, data: { num: hit.data.num, names: hit.data.names, date: hit.data.date, createdAt: hit.data.createdAt } }] : [] }); }

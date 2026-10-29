@@ -125,6 +125,7 @@ async function startServer(){
   $("#tab-admin").hidden=!IS_OWNER;cabState();renderPhotos();accountBar();adminTools();
   DB.doc("data/users/"+UID+"/profile").onSnapshot(s=>{profile=s.exists?JSON.parse(JSON.stringify(s.data())):{};renderCouple();renderQRViews();ensureCardDoc()});
   ["requests","offers","messages"].forEach(col=>DB.collection(col).onSnapshot(s=>{BR[col]={};s.docs.forEach(d=>BR[col][d.id]=d.data());renderBroker()}));
+  DB.collection("freedates").onSnapshot(s=>{FD={};s.docs.forEach(d=>FD[d.id]=d.data());renderFree();renderBroker();if(location.hash.startsWith("#p-"))renderVendorPage(findV(location.hash.slice(3)),false)});
   DB.collection("redemptions").onSnapshot(s=>{QR.reds={};s.docs.forEach(d=>QR.reds[d.id]=d.data());renderQRViews()});
   if(IS_OWNER){DB.collection("complaints").onSnapshot(s=>{BR.complaints={};s.docs.forEach(d=>BR.complaints[d.id]=d.data());renderBroker()});
     DB.collection("cards").onSnapshot(s=>{QR.cards={};s.docs.forEach(d=>QR.cards[d.id]=d.data());renderQRViews()});
