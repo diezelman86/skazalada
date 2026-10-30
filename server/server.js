@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { seoRoute, sitemapXml, robotsTxt, injectSeo } from "./seo.js";
+import { initMaxBot } from "./maxbot.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PUB = path.resolve(HERE, "..", "public");
@@ -36,6 +37,11 @@ CREATE INDEX IF NOT EXISTS events_day ON events(day);
 CREATE INDEX IF NOT EXISTS audit_at ON audit(at);`);
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT"); } catch (_) { /* колонка уже есть */ }
 const ROLES = ["couple", "vendor"];
+let maxbot = null; // бот MAX подключается после миграций
+const N = (uid, text, url) => { if (maxbot && uid) setImmediate(() => maxbot.notify(uid, text, url)); }; // уведомление в MAX, не блокирует запрос
+const ownerOf = vendorId => { const v = getDoc("vendors/" + vendorId); return v ? (v.owner || vendorId) : null; };
+const SITE = () => (process.env.PUBLIC_URL || "https://xn----7sbaabxrwm9c.xn--p1ai").replace(/\/$/, "");
+const fmtD = d => d ? new Date(d).toLocaleDateString("ru-RU") : "";
 
 const nowIso = () => new Date().toISOString();
 const rid = (n = 16) => crypto.randomBytes(n).toString("hex");
@@ -377,12 +383,30 @@ function allOffersFlat() { const out = []; for (const d of listCol("offers")) fo
 
 /* ---------- после записи: заказы из выбранных откликов, SOS ---------- */
 function afterWrite(segs, data, prev, ctx) {
-  if (segs[0] !== "requests" || !data) return;
+  if (!data) return;
+  try { notifyAfterWrite(segs, data, prev, ctx); } catch (e) { console.error("notify", e.message); }
+  if (segs[0] !== "requests") return;
   const coupleUid = segs[1]; const prevById = new Map(itemsOf(prev).map(x => [x.id, x]));
   for (const x of itemsOf(data)) { const p = prevById.get(x.id);
     if (x.status === "selected" && x.selectedOfferId && (!p || p.status !== "selected" || p.selectedOfferId !== x.selectedOfferId)) orderFromSelection(coupleUid, x, ctx.uid);
     if (p && p.status === "selected" && x.status !== "selected") { const o = getDoc("orders/" + x.id); if (o && !["completed_verified"].includes(o.status)) setDoc("orders/" + x.id, { ...o, status: "cancelled", history: [...(o.history || []), { at: nowIso(), by: ctx.uid, type: "selection_cancelled" }] }, ctx.uid); }
     if (x.mode === "sos" && x.status === "pending_review" && (!p || p.status !== "pending_review")) sosAutoPublish(coupleUid, x.id); }
+}
+function notifyAfterWrite(segs, data, prev, ctx) {
+  const top = segs[0]; const prevIds = new Map(itemsOf(prev).map(x => [x.id, x]));
+  const fresh = itemsOf(data).filter(x => !prevIds.has(x.id));
+  if (top === "offers") for (const o of fresh) { const r = findRequest(o.requestId); if (r) N(r.coupleUid, `Новое предложение от «${o.vendorName}» по заявке: ${CATS[r.categoryId] || ""}, ${fmtD(r.eventDate)}`, SITE() + "/#req-" + r.id); }
+  if (top === "messages") for (const m of fresh) { const r = findRequest(m.requestId); if (!r) continue;
+    if (m.from === "vendor") N(r.coupleUid, `Сообщение от «${m.vendorName || "подрядчика"}»: ${String(m.body || "").slice(0, 200)}`, SITE() + "/#req-" + r.id);
+    else N(ownerOf(m.vendorId), `Сообщение от пары по заявке № ${String(r.id).slice(-6).toUpperCase()}: ${String(m.body || "").slice(0, 200)}`, SITE() + "/#req-" + r.id); }
+  if (top === "freedates") for (const x of fresh) { if (x.status !== "active") continue;
+    for (const c of listCol("cards")) { if (coupleDate(c.id) === x.date) N(c.id, `Свободна дата вашей свадьбы ${fmtD(x.date)}: «${x.vendorName}» (${CATS[x.cat] || ""}) — ${Number(x.price).toLocaleString("ru-RU")} ₽`, SITE() + "/#cabinet"); } }
+  if (top === "requests") for (const x of itemsOf(data)) { const p = prevIds.get(x.id);
+    if (p && p.status !== "open" && x.status === "open" && !p.publishedAt && x.publishedAt) N(segs[1], `Заявка № ${String(x.id).slice(-6).toUpperCase()} опубликована — подрядчики начнут присылать предложения`, SITE() + "/#req-" + x.id);
+    if (p && p.status !== "rejected" && x.status === "rejected") N(segs[1], `Заявка № ${String(x.id).slice(-6).toUpperCase()} отклонена модератором: ${x.rejectReason || ""}`, SITE() + "/#req-" + x.id);
+    if (p && p.status !== "selected" && x.status === "selected") { const o = allOffersFlat().find(o => o.id === x.selectedOfferId); if (o) N(ownerOf(o.vendorId), `Пара выбрала ваше предложение: ${CATS[x.categoryId] || ""}, ${fmtD(x.eventDate)}`, SITE() + "/#req-" + x.id); }
+    if (x.mode === "direct" && p && !p.publishedAt && x.publishedAt) N(ownerOf(x.targetedVendorId), `Адресный запрос: ${CATS[x.categoryId] || ""}, ${fmtD(x.eventDate)}, ${x.city || ""}`, SITE() + "/#req-" + x.id); }
+  if (top === "vendors" && prev && prev.mod !== data.mod && ["approved", "rejected"].includes(data.mod)) N(data.owner || segs[1], data.mod === "approved" ? "Ваша карточка одобрена и опубликована в каталоге #СказалаДа!" : "Карточку вернули на доработку: " + (data.modNote || ""), SITE() + "/#cabinet");
 }
 function orderFromSelection(coupleUid, r, by) {
   const o = allOffersFlat().find(o => o.id === r.selectedOfferId); if (!o) return;
@@ -406,6 +430,7 @@ function sosWave(coupleUid, reqId, by) {
   const r = items[i]; const wave = (r.waves || 0) + 1; const already = new Set((r.invited || []).map(x => x.vendorId));
   const { out, excluded } = sosCandidates(r, already, wave > 1);
   const inv = out.map(x => ({ ...x, sentAt: nowIso(), wave, delivery: "cabinet" }));
+  for (const x of inv) N(ownerOf(x.vendorId), `🆘 Срочная заявка SOS: ${CATS[r.categoryId] || ""}, ${fmtD(r.eventDate)}${r.eventTime ? " " + r.eventTime : ""}, ${r.city || ""}. Можете помочь?`, SITE() + "/#req-" + r.id);
   items[i] = { ...r, invited: [...(r.invited || []), ...inv], waves: wave, lastWaveAt: nowIso(), history: [...(r.history || []), { at: nowIso(), actor: by || "system", type: "sos_wave", meta: { wave, count: inv.length } }] };
   setDoc("requests/" + coupleUid, { ...doc, items }, by || "system");
   const meta = getDoc("sosmeta/" + reqId) || { requestId: reqId, waves: [] }; meta.waves.push({ wave, at: nowIso(), invited: inv.map(x => x.vendorName), excluded }); setDoc("sosmeta/" + reqId, meta, "system");
@@ -499,6 +524,9 @@ async function api(req, res, url) {
   resetCaches();
   const user = currentUser(req); const ctx = ctxFor(user); const m = req.method; const route = url.pathname;
   const ip = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+  if (route === "/api/max/webhook" && m === "POST") { // события MAX: проверяем общий секрет из подписки
+    if (!maxbot || !maxbot.checkSecret(req)) return err(res, 403, "forbidden");
+    const u = await readJson(req); send(res, 200, { ok: true }); if (u) setImmediate(() => maxbot.onUpdate(u)); return; }
   if (m !== "GET" && req.headers["x-sd"] !== "1") return err(res, 403, "csrf", "Обновите страницу и повторите");
   if (m !== "GET" && route !== "/api/ev" && limited("w:" + (user ? user.id : ip), 120, 6e4)) return err(res, 429, "resource_exhausted", "Слишком много действий подряд. Подождите минуту.");
 
@@ -579,6 +607,13 @@ async function api(req, res, url) {
 
   const b = m === "GET" ? {} : (await readJson(req) || {});
 
+  /* --- MAX: привязка аккаунта и статус --- */
+  if (route === "/api/max/me" && m === "GET") { if (!user) return err(res, 401, "auth"); return send(res, 200, await maxbot.myStatus(user.id)); }
+  if (route === "/api/max/code" && m === "POST") { if (!user) return err(res, 401, "auth"); if (limited("maxcode:" + user.id, 10, 36e5)) return err(res, 429, "resource_exhausted", "Слишком много кодов за час");
+    const st = await maxbot.myStatus(user.id); if (!st.available) return err(res, 400, "feature_off", "Бот MAX пока не подключён организатором");
+    const code = maxbot.linkCode(user.id); return send(res, 200, { code, deeplink: st.bot ? st.bot + "?start=link_" + code : "", bot: st.bot, expiresMin: 15 }); }
+  if (route === "/api/max/unlink" && m === "POST") { if (!user) return err(res, 401, "auth"); maxbot.unlink(user.id); audit(user.id, "max_unlinked"); return send(res, 200, { ok: true }); }
+
   /* --- заявка на подключение к дисконтной системе (ТЗ 2.5) --- */
   if (route === "/api/apply" && m === "POST") { if (!user) return err(res, 401, "auth", "Войдите, чтобы отправить заявку");
     if (user.role !== "vendor" && !ctx.isAdmin) return err(res, 403, "role_vendor_only", "Подключение доступно подрядчикам");
@@ -624,7 +659,7 @@ async function api(req, res, url) {
     const ex = listCol("orders").find(d => d.data.coupleUid === user.id && d.data.vendorId === b.vendorId && !["cancelled", "declined"].includes(d.data.status));
     if (ex) return err(res, 409, "order_exists", "Заказ у этого подрядчика уже есть");
     const o = { id: genId("ord"), kind: "direct_deal", coupleUid: user.id, vendorId: b.vendorId, vendorName: v.name, cat: v.cat, eventDate: b.eventDate, note: String(b.note || "").slice(0, 400), status: "requested", confirm: {}, createdAt: nowIso(), history: [{ at: nowIso(), by: user.id, type: "requested" }] };
-    setDoc("orders/" + o.id, o, user.id); audit(user.id, "order_request", o.id); return send(res, 200, { ok: true, order: o }); }
+    setDoc("orders/" + o.id, o, user.id); audit(user.id, "order_request", o.id); N(v.owner || b.vendorId, `Пара просит подтвердить заказ на ${fmtD(o.eventDate)} — после этого она сможет оставить отзыв`, SITE() + "/#cabinet"); return send(res, 200, { ok: true, order: o }); }
   if (route === "/api/orders/act" && m === "POST") { if (!user) return err(res, 401, "auth");
     const r = tx(() => { const o = getDoc("orders/" + b.id); if (!o) return ["not_found", 404];
       const side = o.coupleUid === user.id ? "couple" : ctx.ownVendorIds.has(o.vendorId) ? "vendor" : null; if (!side) return ["forbidden", 403];
@@ -635,7 +670,10 @@ async function api(req, res, url) {
       else if (act === "dispute") { if (!["selected", "confirmed"].includes(o.status)) return ["bad_transition", 400]; o.status = "disputed"; }
       else if (act === "cancel") { if (side !== "couple" || !["requested"].includes(o.status)) return ["bad_transition", 400]; o.status = "cancelled"; }
       else return ["bad_action", 400];
-      o.history = [...(o.history || []), h]; setDoc("orders/" + o.id, o, user.id); audit(user.id, "order_" + act, o.id); return [null, 200, o]; });
+      o.history = [...(o.history || []), h]; setDoc("orders/" + o.id, o, user.id); audit(user.id, "order_" + act, o.id);
+      const msg = { accept: "подрядчик подтвердил заказ", decline: "подрядчик не подтвердил заказ", done: o.status === "completed_verified" ? "выполнение подтверждено обеими сторонами — можно оставить отзыв" : "вторая сторона подтвердила выполнение — подтвердите и вы", dispute: "открыты разногласия" }[act];
+      if (msg) N(side === "vendor" ? o.coupleUid : ownerOf(o.vendorId), `Заказ «${o.vendorName}» на ${fmtD(o.eventDate)}: ${msg}`, SITE() + "/#cabinet");
+      return [null, 200, o]; });
     if (r[0]) return err(res, r[1], r[0], { too_early: "Подтвердить выполнение можно после даты оказания услуги", bad_transition: "Действие недоступно для этого заказа", exists: "Вы уже подтвердили выполнение" }[r[0]]);
     return send(res, 200, { ok: true, order: r[2] }); }
 
@@ -676,7 +714,7 @@ async function api(req, res, url) {
       const blocked = new Set(listCol("blocks").map(b => b.id));
       const uses = new Map(); for (const d of listCol("redemptions")) for (const x of itemsOf(d.data)) { const u = uses.get(x.card) || { n: 0, sum: 0, last: "", vendors: new Set() }; u.n++; u.sum += +x.amount || 0; if (String(x.at) > u.last) u.last = x.at; u.vendors.add(x.vendorName || x.vendorId); uses.set(x.card, u); }
       const cards = listCol("cards").map(d => { const p = getDoc("data/users/" + d.id + "/profile") || {}; const u = db.prepare("SELECT email,disabled FROM users WHERE id=?").get(d.id) || {}; const us = uses.get(d.data.num) || { n: 0, sum: 0, last: "", vendors: new Set() };
-        return { uid: d.id, num: d.data.num, names: d.data.names || p.names || "", date: d.data.date || p.date || "", createdAt: d.data.createdAt || "", phone: p.phone || "", city: p.city || "", email: u.disabled ? "" : (u.email || ""), deleted: !!u.disabled,
+        return { uid: d.id, num: d.data.num, names: d.data.names || p.names || "", date: d.data.date || p.date || "", createdAt: d.data.createdAt || "", phone: p.phone || "", city: p.city || "", email: u.disabled ? "" : String(u.email || "").endsWith("@max.bot") ? "через MAX" : (u.email || ""), deleted: !!u.disabled, viaMax: String(u.email || "").endsWith("@max.bot"),
           blocked: blocked.has(d.data.num), uses: us.n, sum: us.sum, lastUse: us.last, vendors: [...us.vendors] }; })
         .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
       audit(ctx.uid, "cards_registry_view"); return send(res, 200, { cards }); }
@@ -719,7 +757,8 @@ async function api(req, res, url) {
       if (["rejected", "need_info"].includes(b.status) && !String(b.comment || "").trim()) return err(res, 400, "invalid_argument", "Укажите комментарий для заявителя");
       const na = { ...a, status: b.status, reviewedBy: ctx.uid, reviewedAt: nowIso(), adminComment: String(b.comment || "").slice(0, 600),
         history: [...(a.history || []), { at: nowIso(), by: ctx.uid, status: b.status, comment: String(b.comment || "").slice(0, 600) }] };
-      setDoc("applications/" + a.id, na, ctx.uid); audit(ctx.uid, "application_status", a.id, { status: b.status }); return send(res, 200, { ok: true, application: na }); }
+      setDoc("applications/" + a.id, na, ctx.uid); audit(ctx.uid, "application_status", a.id, { status: b.status });
+      N(a.applicantUid, `Заявка ${a.num}: ${{ in_work: "в работе", need_info: "требуется уточнение", approved: "одобрена", rejected: "отклонена", closed: "закрыта" }[b.status] || b.status}${b.comment ? " — " + String(b.comment).slice(0, 300) : ""}`, SITE() + "/#cabinet"); return send(res, 200, { ok: true, application: na }); }
     if (route === "/api/admin/plus" && m === "POST") { // выдать, продлить, приостановить, отозвать «Партнёр +» (только явным действием организатора)
       const v = getDoc("vendors/" + b.vendorId); if (!v) return err(res, 404, "not_found", "Карточка не найдена");
       const r = tx(() => { const prev = getDoc("subs/" + b.vendorId); const act = b.action; const by = ctx.uid; let s = prev ? { ...prev } : { vendorId: b.vendorId, planCode: "PLUS", changeHistory: [] };
@@ -736,6 +775,7 @@ async function api(req, res, url) {
         s.changeHistory = [...(s.changeHistory || []), { at: nowIso(), by, action: act, startAt: s.startAt, endAt: s.endAt, participationVerified: s.participationVerified, discountApproved: !!s.discountApproved, note: String(b.note || "").slice(0, 400), applicationId: b.applicationId || "" }];
         s.updatedAt = nowIso(); setDoc("subs/" + b.vendorId, s, by);
         if (b.applicationId) { const a = getDoc("applications/" + b.applicationId); if (a && APP_ACTIVE.concat(["approved"]).includes(a.status)) setDoc("applications/" + a.id, { ...a, status: "approved", reviewedBy: by, reviewedAt: nowIso(), history: [...(a.history || []), { at: nowIso(), by, status: "approved", comment: "Активирован «Партнёр +»" }] }, by); }
+        if (act === "grant" && s.participationVerified) N(ownerOf(b.vendorId), `Подключён «Партнёр +» до ${fmtD(s.endAt)}. Заявки пар, SOS, календарь и скидка по карте доступны в кабинете.`, SITE() + "/#cabinet");
         audit(by, "plus_" + act, b.vendorId, { startAt: s.startAt, endAt: s.endAt, participationVerified: s.participationVerified, discountApproved: !!s.discountApproved, applicationId: b.applicationId || "" }); return null; });
       if (r) return err(res, 400, "invalid_argument", r); return send(res, 200, { ok: true }); }
     if (route === "/api/admin/terms" && m === "POST") { // утверждение условий скидки и спецпредложения
@@ -754,7 +794,8 @@ async function api(req, res, url) {
       if (st !== "published" && !String(b.reason || "").trim()) return err(res, 400, "invalid_argument", "Укажите причину");
       const nrv = { ...rv, status: st, moderation: { at: nowIso(), by: ctx.uid, reason: String(b.reason || "").slice(0, 400) }, publishedAt: st === "published" ? (rv.publishedAt || nowIso()) : rv.publishedAt,
         complaint: rv.complaint && b.closeComplaint ? { ...rv.complaint, status: "closed" } : rv.complaint, history: [...(rv.history || []), { at: nowIso(), by: ctx.uid, type: "admin_" + st, reason: String(b.reason || "") }] };
-      setDoc("reviews/" + rv.id, nrv, ctx.uid); audit(ctx.uid, "review_" + st, rv.id); return send(res, 200, { ok: true }); }
+      setDoc("reviews/" + rv.id, nrv, ctx.uid); audit(ctx.uid, "review_" + st, rv.id);
+      N(rv.coupleUid, st === "published" ? `Ваш отзыв о «${rv.vendorName}» опубликован. Спасибо!` : `Отзыв о «${rv.vendorName}» не опубликован: ${b.reason || ""}`, SITE() + "/#cabinet"); if (st === "published") N(ownerOf(rv.vendorId), `Новый отзыв ${"★".repeat(rv.rating)} в вашей карточке`, SITE() + "/#cabinet"); return send(res, 200, { ok: true }); }
     if (route === "/api/admin/sos" && m === "POST") { const r = findRequest(b.requestId); if (!r || r.mode !== "sos") return err(res, 404, "not_found");
       const doc = getDoc("requests/" + r.coupleUid); const upd = patch => setDoc("requests/" + r.coupleUid, { ...doc, items: itemsOf(doc).map(x => x.id === r.id ? { ...x, ...patch, history: [...(x.history || []), { at: nowIso(), actor: ctx.uid, type: "sos_" + b.action }] } : x) }, ctx.uid);
       if (b.action === "stop") upd({ sosStopped: true });
@@ -766,6 +807,11 @@ async function api(req, res, url) {
         upd({ invited: [...(r.invited || []), { vendorId: b.vendorId, vendorName: v.name, sentAt: nowIso(), reasons: ["приглашён организатором"], wave: 0, delivery: "cabinet" }] }); }
       else return err(res, 400, "invalid_argument");
       audit(ctx.uid, "sos_admin_" + b.action, r.id); return send(res, 200, { ok: true }); }
+    if (route === "/api/admin/maxbot") { // токен бота хранится только на сервере; наружу — последние 4 символа
+      if (m === "GET") return send(res, 200, await maxbot.status());
+      if (m === "POST") { const t = String(b.token || "").trim(); if (!/^[A-Za-z0-9_\-]{20,200}$/.test(t)) return err(res, 400, "invalid_argument", "Проверьте токен");
+        try { await maxbot.setToken(t); audit(ctx.uid, "max_token_set"); return send(res, 200, await maxbot.status()); } catch (e) { return err(res, 400, "invalid_argument", "MAX не принял токен или вебхук: " + e.message); } }
+      if (m === "DELETE") { await maxbot.disconnect(); audit(ctx.uid, "max_disconnected"); return send(res, 200, { ok: true }); } }
     if (route === "/api/admin/sosmeta" && m === "GET") return send(res, 200, { meta: getDoc("sosmeta/" + url.searchParams.get("id")) });
     return err(res, 404, "not_found"); }
   return err(res, 404, "not_found");
@@ -813,6 +859,8 @@ function migrate() {
   for (const [id, fn] of todo) { tx(() => { resetCaches(); fn(); db.prepare("INSERT INTO migrations VALUES(?,?,?)").run(id, nowIso(), fs.existsSync(file) ? path.basename(file) : ""); }); console.log("migration", id, "done"); }
   resetCaches(); }
 seed(); migrate();
+const publicVendors = () => listCol("vendors").filter(d => d.data.name && d.data.visible !== false && isApproved(d.data)).map(d => vendorView(d.id, d.data, ctxFor(null))).filter(Boolean);
+maxbot = initMaxBot({ db, getDoc, setDoc, listCol, nowIso, audit, PUBLIC_URL, CATS, catSlug, publicVendors });
 setInterval(() => db.prepare("DELETE FROM sessions WHERE expires<?").run(Date.now()), 36e5).unref();
 
 http.createServer(async (req, res) => {

@@ -2127,11 +2127,11 @@ function renderPlanTab(){const box=$("#plan-box");if(!box)return;if(ROLE!=="vend
 /* ---------- вкладки кабинета ---------- */
 const busyIn=el=>{if(!el)return false;const a=document.activeElement;return!!((a&&el.contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))||el.querySelector("[data-dirty]"))};
 function afterSetTab(t,quiet){if(!PLUS_READY)return;if(!window.SD_SERVER)return;lockIcons();applyLocks(t);if(LOCKS[t]&&vendorLocked())return;
-  if(t==="couple")renderFavPanel();
+  if(t==="couple"){renderFavPanel();loadMaxSt();renderMaxPanels()}
   if(t==="free"&&!busyIn($("#cal-panel")))renderCalPanel();
   if(t==="sos")renderSosList();
   if(t==="orders"&&!busyIn($("#t-orders")))renderOrders();
-  if(t==="plan"&&!busyIn($("#plan-box"))){renderPlanTab();if(!quiet)loadStats(true)}
+  if(t==="plan"&&!busyIn($("#plan-box"))){renderPlanTab();if(!quiet)loadStats(true);loadMaxSt();renderMaxPanels()}
   if(t==="vendor"){const v=liveVendors.find(x=>x.id===editingId);termsLock(v)}
   if(t==="admin"&&!quiet)renderAdminPlus();else if(t==="admin")renderAdminPlus(true)}
 
@@ -2433,6 +2433,7 @@ function admSettings(el){const s=PX.settings,F2=s.features||{};const FL={plus:"�
    <div class="g2"><label>Отзыв: минимум символов<input type="number" name="reviewMin" min="10" max="500" value="${s.reviewMin??50}"></label><label>Отзыв: максимум символов<input type="number" name="reviewMax" min="200" max="5000" value="${s.reviewMax??1500}"></label></div>
    <label>Текст о стоимости «Партнёр +», если цена не задана<input name="plusPriceText" maxlength="160" value="${esc(s.plusPriceText||"")}"></label>
    <div class="row"><button class="btn" type="submit">Сохранить настройки</button><span class="msg" id="set-m"></span></div></form>`;
+  admMax(el);
   const f=$("#set-f");f.oninput=()=>f.dataset.dirty="1";f.onsubmit=async e=>{e.preventDefault();const fd=new FormData(f);const n=k=>+fd.get(k);
     const doc={...s,features:Object.fromEntries(Object.keys(FL).map(k=>[k,!!fd.get("f_"+k)])),pinnedMobile:n("pinnedMobile"),pinnedDesktop:n("pinnedDesktop"),firstPage:n("firstPage"),adMarker:fd.get("adMarker")||"Реклама",excludePinnedFromOrganic:!!fd.get("excludePinnedFromOrganic"),plusRotation:!!fd.get("plusRotation"),
       viewMinPct:n("viewMinPct"),viewMinMs:n("viewMinMs"),calendarMonths:n("calendarMonths"),sosWaveMinutes:n("sosWaveMinutes"),sosMaxWaves:n("sosMaxWaves"),sosAutoPublish:!!fd.get("sosAutoPublish"),reviewMin:n("reviewMin"),reviewMax:n("reviewMax"),plusPriceText:fd.get("plusPriceText"),updatedAt:nowIso()};
@@ -2465,6 +2466,32 @@ if(isIOS())setTimeout(showInstall,1500);
 function saveOfflineCard(){try{if(!window.SD_SERVER||!UID||!profile||!profile.card)return;const qr=$("#qr svg");lsSet("sd-card-offline",JSON.stringify({num:profile.card,names:profile.names||"",date:profile.date?new Date(profile.date).toLocaleDateString("ru-RU"):"",qr:qr?qr.outerHTML:""}))}catch(_){}}
 if(typeof renderQR==="function"){const _rq=renderQR;renderQR=function(num){_rq(num);saveOfflineCard()}}
 document.addEventListener("click",e=>{if(e.target.closest("#logout"))try{localStorage.removeItem("sd-card-offline")}catch(_){}},true);
+
+/* ---------- MAX: привязка аккаунта в кабинете и управление ботом у организатора ---------- */
+let maxSt=null,maxStAt=0,maxCode=null;
+async function loadMaxSt(force){if(!window.SD_SERVER||!UID)return;if(!force&&maxSt&&Date.now()-maxStAt<6e4)return;maxStAt=Date.now();try{maxSt=await apiFetch("/api/max/me");renderMaxPanels()}catch(_){}}
+function maxPanelHtml(){if(!maxSt||!maxSt.available)return"";
+  if(maxSt.linked)return`<div class="row" style="justify-content:space-between"><h3 style="margin:0">MAX подключён ✓</h3><button class="btn ghost small" type="button" data-max="unlink">Отвязать</button></div><p class="note" style="margin:0">Уведомления портала приходят в бот #СказалаДа! в MAX${maxSt.notify?"":" (сейчас выключены — включите в боте кнопкой «Уведомления»)"}. Там же — ваша карта с QR-кодом.</p>${maxSt.bot?`<a class="btn ghost small" href="${esc(maxSt.bot)}" target="_blank" rel="noopener" style="text-decoration:none;justify-self:start">Открыть бот в MAX</a>`:""}`;
+  if(maxCode)return`<h3 style="margin:0">Подключить MAX</h3><p style="margin:0">Нажмите кнопку — бот откроется и привяжется сам. Или отправьте боту код:</p><div class="code"><code style="font-size:24px;letter-spacing:.2em">${esc(maxCode.code)}</code></div>${maxCode.deeplink?`<a class="btn" href="${esc(maxCode.deeplink)}" target="_blank" rel="noopener" style="text-decoration:none;justify-self:start">Открыть в MAX</a>`:""}<p class="note" style="margin:0">Код действует ${maxCode.expiresMin} минут. <button class="btn ghost small" type="button" data-max="check">Я привязал — проверить</button></p>`;
+  return`<h3 style="margin:0">Бот #СказалаДа! в MAX</h3><p class="note" style="margin:0">${ROLE==="vendor"?"Новые заявки пар, SOS, сообщения и статус «Партнёр +» — уведомлениями в MAX.":"Карта с QR-кодом в мессенджере и уведомления: предложения подрядчиков, свободные даты в день свадьбы."}</p><button class="btn small" type="button" data-max="code" style="justify-self:start">Подключить MAX</button>`}
+function renderMaxPanels(){if(!window.SD_SERVER||!UID)return;const html=maxPanelHtml();
+  const hosts=ROLE==="couple"?[["#fav-panel","max-panel-c"]]:ROLE==="vendor"?[["#plan-box","max-panel-v"]]:[];/* вставляем рядом, а не внутрь: содержимое вкладок перерисовывается */
+  for(const [anchor,id] of hosts){const a=$(anchor);if(!a)continue;let el=document.getElementById(id);
+    if(!el){a.insertAdjacentHTML("beforebegin",`<div class="panel" id="${id}" style="gap:10px;${ROLE==="vendor"?"margin-bottom:16px":""}"></div>`);el=document.getElementById(id)}
+    el.hidden=!html;if(el.dataset.html!==html){el.innerHTML=html;el.dataset.html=html}}}
+document.addEventListener("click",async e=>{const b=e.target.closest("[data-max]");if(!b)return;const a=b.dataset.max;b.disabled=true;
+  try{if(a==="code"){maxCode=await papi("/api/max/code",{});renderMaxPanels()}
+    else if(a==="check"){await loadMaxSt(true);if(maxSt&&maxSt.linked){maxCode=null;toast("MAX подключён")}else toast("Пока не привязано. Откройте бот и отправьте код");renderMaxPanels()}
+    else if(a==="unlink"){if(b.dataset.armed!=="1"){b.dataset.armed="1";b.textContent="Точно отвязать?";b.disabled=false;return}await papi("/api/max/unlink",{});maxCode=null;await loadMaxSt(true);toast("MAX отвязан")}}catch(err){toast(err.message||errText(err))}b.disabled=false});
+async function admMax(el){let st={};try{st=await apiFetch("/api/admin/maxbot")}catch(_){}
+  el.insertAdjacentHTML("afterbegin",`<form class="mini-form panel" id="maxbot-f" novalidate style="margin-bottom:16px"><h3 style="margin:0">Бот MAX</h3>
+   ${st.connected?`<p style="margin:0">Подключён: <b>${esc(st.name||"")}</b> · <a href="${esc(st.link)}" target="_blank" rel="noopener">${esc(st.link)}</a></p><p class="note" style="margin:0">Режим: ${st.mode==="webhook"?"вебхук (боевой)":"опрос (тестовый)"} · пользователей бота: ${st.users} · привязано к аккаунтам: ${st.linked} · токен …${esc(st.tokenTail)}</p>`
+     :`<p class="note" style="margin:0">${st.error?"Ошибка: "+esc(st.error)+". ":""}Вставьте токен бота с платформы MAX для партнёров (business.max.ru/self). Токен хранится только на сервере и не показывается.</p>`}
+   <label>${st.connected?"Заменить токен":"Токен бота"}<input type="password" name="token" autocomplete="off" placeholder="длинная строка из кабинета MAX"></label>
+   <div class="row"><button class="btn small" type="submit">${st.connected?"Заменить":"Подключить бота"}</button>${st.connected?'<button class="btn ghost small" type="button" id="maxbot-off">Отключить бота</button>':""}<span class="msg" id="maxbot-m"></span></div></form>`);
+  const f=$("#maxbot-f");f.oninput=()=>f.dataset.dirty="1";f.onsubmit=async e=>{e.preventDefault();const t=new FormData(f).get("token").trim();if(!t){$("#maxbot-m").textContent="Вставьте токен";return}$("#maxbot-m").textContent="Подключаем…";
+    try{await papi("/api/admin/maxbot",{token:t});delete f.dataset.dirty;toast("Бот MAX подключён");f.remove();admMax(el)}catch(err){$("#maxbot-m").textContent=err.message||errText(err)}};
+  const off=$("#maxbot-off");if(off)off.onclick=async()=>{if(off.dataset.armed!=="1"){off.dataset.armed="1";off.textContent="Точно отключить?";return}try{await apiFetch("/api/admin/maxbot",{method:"DELETE"});toast("Бот отключён");f.remove();admMax(el)}catch(err){toast(errText(err))}}}
 
 PLUS_READY=true;
 
