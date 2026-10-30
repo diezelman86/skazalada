@@ -14,10 +14,12 @@ head = """<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <base href="/">
 <title>Портал #СказалаДа!</title>
 <link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#22303B"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="СказалаДа!">
 <script>window.SD_SERVER=true;</script>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 </head><body>
 """
+s = s.replace("https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js", "/assets/qrcode.js")  # своя копия: QR работает и без внешнего CDN
 (PUB / "index.html").write_text(head + s + "\n</body></html>\n", encoding="utf-8")
 for f in (SRC / "assets").iterdir():
     if f.suffix.lower() in (".jpg", ".png") or f.name == "credits.json":

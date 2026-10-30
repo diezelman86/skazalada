@@ -1,0 +1,12 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#22303B"><title>Нет связи — #СказалаДа!</title>
+<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/assets/icon-192.png">
+<style>:root{--bg:#F7FAFC;--ink:#22303B;--muted:#5E6B76;--line:#DCE5EC;--cu:#A9622F}
+@media (prefers-color-scheme:dark){:root{--bg:#141B22;--ink:#EEF3F7;--muted:#9fb0bd;--line:#2a3742;--cu:#E2A57C}}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}main{max-width:460px;margin:0 auto;padding:28px 16px;display:grid;gap:16px}
+img.logo{width:180px}h1{font-size:22px;margin:0}p{margin:0;color:var(--muted)}.card{border-radius:18px;padding:22px;color:#fff;background:linear-gradient(120deg,#8C4A22,#D0915F);display:grid;gap:10px}
+.card b{font-size:22px;letter-spacing:.06em}.qr{background:#fff;border-radius:12px;padding:10px;justify-self:center;width:220px}.qr svg{width:100%;height:auto;display:block}
+button{font:inherit;border:0;border-radius:10px;padding:12px 18px;background:var(--cu);color:#fff;font-weight:700}</style></head>
+<body><main><img class="logo" src="/assets/logo-600.png" alt="#СказалаДа!"><h1>Нет подключения к интернету</h1>
+<p>Каталог и кабинет откроются, когда появится связь. Ваша карта скидок доступна и без интернета.</p>
+<div id="card"></div><button type="button" onclick="location.reload()">Попробовать снова</button></main>
+<script>try{const c=JSON.parse(localStorage.getItem("sd-card-offline")||"null");if(c&&c.num){const e=document.getElementById("card");e.innerHTML='<div class="card"><span>Карта свадебных скидок #СказалаДа!</span><b></b><span class="who"></span>'+(c.qr?'<div class="qr">'+c.qr+'</div>':'')+'</div><p>Покажите QR-код или назовите номер карты подрядчику.</p>';e.querySelector("b").textContent=c.num;e.querySelector(".who").textContent=[c.names,c.date].filter(Boolean).join(" · ")}}catch(_){}</script></body></html>

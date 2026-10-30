@@ -1,0 +1,26 @@
+{
+  "name": "#СказалаДа! — свадебный портал",
+  "short_name": "СказалаДа!",
+  "description": "Каталог свадебных подрядчиков со скидками по карте #СказалаДа!, свадебный брокер и личный кабинет.",
+  "id": "/?app=skazalada",
+  "start_url": "/?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "ru",
+  "dir": "ltr",
+  "background_color": "#F7FAFC",
+  "theme_color": "#22303B",
+  "categories": ["lifestyle", "shopping"],
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Моя карта", "short_name": "Карта", "url": "/?source=app#cabinet", "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Каталог подрядчиков", "short_name": "Каталог", "url": "/?source=app", "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Нужна срочная замена", "short_name": "SOS", "url": "/?source=app#sos-new", "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

@@ -681,4 +681,32 @@ function admSettings(el){const s=PX.settings,F2=s.features||{};const FL={plus:"�
       viewMinPct:n("viewMinPct"),viewMinMs:n("viewMinMs"),calendarMonths:n("calendarMonths"),sosWaveMinutes:n("sosWaveMinutes"),sosMaxWaves:n("sosMaxWaves"),sosAutoPublish:!!fd.get("sosAutoPublish"),reviewMin:n("reviewMin"),reviewMax:n("reviewMax"),plusPriceText:fd.get("plusPriceText"),updatedAt:nowIso()};
     try{await DB.doc("settings/main").set(doc);PX.settings=doc;delete f.dataset.dirty;$("#set-m").textContent="Сохранено";render()}catch(err){$("#set-m").textContent=errText(err)}}}
 
+/* ---------- приложение для Android (PWA): установка, офлайн-карта ---------- */
+const isStandalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;
+let installEvt=null;
+if(window.SD_SERVER&&"serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEvt=e;showInstall()});
+addEventListener("appinstalled",()=>{installEvt=null;lsSet("sd-app-installed","1");hideInstall();toast("Приложение #СказалаДа! установлено")});
+document.head.insertAdjacentHTML("beforeend",`<style>.app-bar{position:fixed;left:12px;right:12px;bottom:12px;z-index:90;display:flex;gap:12px;align-items:center;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:12px 14px;box-shadow:0 10px 30px #0003;max-width:520px;margin:0 auto}
+.app-bar img{width:44px;height:44px;border-radius:10px;flex:none}.app-bar div{flex:1;min-width:0;display:grid;gap:2px}.app-bar small{color:var(--muted);line-height:1.4}.app-bar .x{border:0;background:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 6px}
+.app-inst{cursor:pointer}</style>`);
+function canOfferInstall(){return window.SD_SERVER&&!isStandalone()&&lsGet("sd-app-installed","")!=="1"&&(installEvt||isIOS())}
+function showInstall(){if(!canOfferInstall())return;
+  document.querySelectorAll(".app-inst").forEach(b=>b.hidden=false);
+  const ft=document.querySelector(".site-footer .wrap > div:nth-child(2)");if(ft&&!ft.querySelector(".app-inst"))ft.insertAdjacentHTML("beforeend",'<a class="app-inst" role="button" tabindex="0">📱 Установить приложение</a>');
+  const until=+lsGet("sd-app-bar-off","0");if(Date.now()<until||$("#app-bar")||!isMobile())return;
+  setTimeout(()=>{if($("#app-bar")||!canOfferInstall())return;document.body.insertAdjacentHTML("beforeend",`<div class="app-bar" id="app-bar" role="dialog" aria-label="Установить приложение"><img src="/assets/icon-192.png" alt=""><div><b>Приложение #СказалаДа!</b><small>${installEvt?"Карта скидок и каталог всегда под рукой — даже без интернета":"Нажмите «Поделиться» ⎋ и выберите «На экран „Домой“»"}</small></div>${installEvt?'<button class="btn small app-inst" type="button">Установить</button>':""}<button class="x" type="button" aria-label="Закрыть" id="app-bar-x">✕</button></div>`);
+    $("#app-bar-x").onclick=()=>{lsSet("sd-app-bar-off",String(Date.now()+14*864e5));hideInstall(true)}},6000)}
+function hideInstall(barOnly){const b=$("#app-bar");if(b)b.remove();if(!barOnly)document.querySelectorAll(".app-inst").forEach(x=>x.hidden=true)}
+async function doInstall(){if(installEvt){installEvt.prompt();const r=await installEvt.userChoice.catch(()=>({}));if(r&&r.outcome==="accepted")lsSet("sd-app-installed","1");installEvt=null;hideInstall()}
+  else if(isIOS())toast("В Safari нажмите «Поделиться», затем «На экран „Домой“»");else toast("Откройте меню браузера и выберите «Установить приложение»")}
+document.addEventListener("click",e=>{if(e.target.closest(".app-inst")){e.preventDefault();doInstall()}});
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.closest&&e.target.closest("a.app-inst")){e.preventDefault();doInstall()}});
+if(isIOS())setTimeout(showInstall,1500);
+// карта с QR остаётся доступной без интернета (только на этом устройстве, очищается при выходе)
+function saveOfflineCard(){try{if(!window.SD_SERVER||!UID||!profile||!profile.card)return;const qr=$("#qr svg");lsSet("sd-card-offline",JSON.stringify({num:profile.card,names:profile.names||"",date:profile.date?new Date(profile.date).toLocaleDateString("ru-RU"):"",qr:qr?qr.outerHTML:""}))}catch(_){}}
+if(typeof renderQR==="function"){const _rq=renderQR;renderQR=function(num){_rq(num);saveOfflineCard()}}
+document.addEventListener("click",e=>{if(e.target.closest("#logout"))try{localStorage.removeItem("sd-card-offline")}catch(_){}},true);
+
 PLUS_READY=true;

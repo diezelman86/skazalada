@@ -431,7 +431,7 @@ setInterval(sosTick, 6e4).unref();
 
 /* ---------- HTTP ---------- */
 const MIME = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8",
-  ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml", ".ico": "image/x-icon", ".txt": "text/plain; charset=utf-8", ".woff2": "font/woff2", ".xml": "application/xml; charset=utf-8" };
+  ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml", ".ico": "image/x-icon", ".txt": "text/plain; charset=utf-8", ".woff2": "font/woff2", ".xml": "application/xml; charset=utf-8", ".webmanifest": "application/manifest+json; charset=utf-8" };
 function send(res, code, body, headers = {}) { const isObj = typeof body === "object" && !Buffer.isBuffer(body);
   res.writeHead(code, { "Content-Type": isObj ? "application/json; charset=utf-8" : "text/plain; charset=utf-8", "Cache-Control": "no-store", ...headers });
   res.end(isObj ? JSON.stringify(body) : body); }
@@ -462,7 +462,8 @@ function serveStatic(req, res, urlPath) {
   const file = path.resolve(PUB, "." + p); if (!file.startsWith(PUB)) return err(res, 403, "forbidden");
   fs.stat(file, (e, st) => { if (e || !st.isFile()) return err(res, 404, "not_found");
     const ext = path.extname(file).toLowerCase();
-    res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream", "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=604800", ...SEC_HEADERS });
+    const fresh = ext === ".html" || p === "/sw.js" || p === "/manifest.webmanifest";
+    res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream", "Cache-Control": fresh ? "no-cache" : "public, max-age=604800", ...(p === "/sw.js" ? { "Service-Worker-Allowed": "/" } : {}), ...SEC_HEADERS });
     fs.createReadStream(file).pipe(res); }); }
 function serveUpload(res, id) { if (!/^[a-f0-9]{32}$/.test(id)) return err(res, 404, "not_found");
   const u = db.prepare("SELECT type FROM uploads WHERE id=?").get(id); if (!u) return err(res, 404, "not_found");
