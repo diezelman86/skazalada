@@ -2300,7 +2300,7 @@ function renderAdminPlus(quiet){if(!IS_OWNER||!window.SD_SERVER)return;const roo
   ADM_SECS.forEach(([k])=>{const el=$("#adm-sec-"+k);if(el)el.hidden=k!==admSec});
   const el=$("#adm-sec-"+admSec);if(admSec==="overview"||!el||busyIn(el))return;
   const openIdx=[...el.querySelectorAll("details")].map((d,i)=>d.open?i:-1).filter(i=>i>=0);
-  ({apps:admApps,subs:admSubs,ads:admAds,reviews:admReviews,sos:admSos,journal:quiet?()=>{}:admJournal,settings:admSettings})[admSec](el);
+  ({apps:admApps,subs:admSubs,ads:admAds,reviews:admReviews,sos:admSos,journal:quiet?()=>{}:admJournal,settings:quiet?()=>{}:admSettings})[admSec](el);
   const ds=el.querySelectorAll("details");openIdx.forEach(i=>{if(ds[i])ds[i].open=true})}
 const vName=id=>(liveVendors.find(v=>v.id===id)||{}).name||"—";
 let appFlt={st:"active",cat:"",src:"",q:""};
@@ -2422,7 +2422,7 @@ function admSos(el){const l=allReqs().filter(r=>r.mode==="sos").sort((a,b)=>(req
 async function admJournal(el){el.innerHTML=`<div class="panel"><h3>Журнал действий</h3><p class="note">Загружаем…</p></div>`;try{const j=await apiFetch("/api/admin/journal?limit=300");
   el.innerHTML=`<div class="panel"><div class="row" style="justify-content:space-between"><h3>Журнал действий</h3><button class="btn ghost small" type="button" id="jr-r">Обновить</button></div><p class="note" style="margin:0">Кто, когда и что изменил: статусы, тарифы, кампании, отзывы, заявки. Без входов в аккаунт.</p><div class="tbl"><table><thead><tr><th>Когда</th><th>Кто</th><th>Действие</th><th>Объект</th></tr></thead><tbody>${j.rows.map(r=>`<tr><td>${new Date(r.at).toLocaleString("ru-RU")}</td><td>${esc(r.email||r.uid||"система")}</td><td>${esc(r.action)}</td><td><small>${esc(r.target||"")}</small></td></tr>`).join("")}</tbody></table></div></div>`;$("#jr-r").onclick=()=>admJournal(el)}catch(e){el.innerHTML=`<div class="panel">${esc(errText(e))}</div>`}}
 function admSettings(el){const s=PX.settings,F2=s.features||{};const FL={plus:"Уровни FREE / «Партнёр +»",ads:"Реклама и «В центре внимания»",favorites:"Избранное пар",direct:"Адресный запрос",calendar:"Календарь занятости",sos:"Свадебный SOS",reviews:"Заказы и отзывы",seo:"Индексация поисковиками"};
-  el.innerHTML=`<form class="mini-form panel" id="set-f" novalidate><h3 style="margin:0">Настройки портала</h3><p class="note" style="margin:0">Меняются без правки кода. Выключенная функция скрывается из интерфейса и отключается на сервере.</p>
+  el.innerHTML=`<div id="maxbot-box"></div><form class="mini-form panel" id="set-f" novalidate><h3 style="margin:0">Настройки портала</h3><p class="note" style="margin:0">Меняются без правки кода. Выключенная функция скрывается из интерфейса и отключается на сервере.</p>
    <fieldset style="border:0;padding:0"><legend>Функции</legend>${Object.entries(FL).map(([k,l])=>`<label class="chk"><input type="checkbox" name="f_${k}" ${F2[k]!==false?"checked":""}> ${l}</label>`).join("")}</fieldset>
    <div class="g2"><label>Карточек в «В центре внимания» на телефоне<input type="number" name="pinnedMobile" min="0" max="4" value="${s.pinnedMobile??2}"></label><label>…на компьютере<input type="number" name="pinnedDesktop" min="0" max="6" value="${s.pinnedDesktop??3}"></label></div>
    <div class="g2"><label>Карточек до «Показать ещё»<input type="number" name="firstPage" min="6" max="48" value="${s.firstPage??12}"></label><label>Пометка рекламы<input name="adMarker" maxlength="40" value="${esc(s.adMarker||"Реклама")}"></label></div>
@@ -2483,15 +2483,17 @@ document.addEventListener("click",async e=>{const b=e.target.closest("[data-max]
   try{if(a==="code"){maxCode=await papi("/api/max/code",{});renderMaxPanels()}
     else if(a==="check"){await loadMaxSt(true);if(maxSt&&maxSt.linked){maxCode=null;toast("MAX подключён")}else toast("Пока не привязано. Откройте бот и отправьте код");renderMaxPanels()}
     else if(a==="unlink"){if(b.dataset.armed!=="1"){b.dataset.armed="1";b.textContent="Точно отвязать?";b.disabled=false;return}await papi("/api/max/unlink",{});maxCode=null;await loadMaxSt(true);toast("MAX отвязан")}}catch(err){toast(err.message||errText(err))}b.disabled=false});
-async function admMax(el){let st={};try{st=await apiFetch("/api/admin/maxbot")}catch(_){}
-  el.insertAdjacentHTML("afterbegin",`<form class="mini-form panel" id="maxbot-f" novalidate style="margin-bottom:16px"><h3 style="margin:0">Бот MAX</h3>
+let admMaxSeq=0;
+async function admMax(el){const seq=++admMaxSeq;let st={};try{st=await apiFetch("/api/admin/maxbot")}catch(_){}
+  const box=$("#maxbot-box");if(!box||seq!==admMaxSeq)return; // устаревший ответ — не рисуем
+  box.innerHTML=(`<form class="mini-form panel" id="maxbot-f" novalidate style="margin-bottom:16px"><h3 style="margin:0">Бот MAX</h3>
    ${st.connected?`<p style="margin:0">Подключён: <b>${esc(st.name||"")}</b> · <a href="${esc(st.link)}" target="_blank" rel="noopener">${esc(st.link)}</a></p><p class="note" style="margin:0">Режим: ${st.mode==="webhook"?"вебхук (боевой)":"опрос (тестовый)"} · пользователей бота: ${st.users} · привязано к аккаунтам: ${st.linked} · токен …${esc(st.tokenTail)}</p>`
      :`<p class="note" style="margin:0">${st.error?"Ошибка: "+esc(st.error)+". ":""}Вставьте токен бота с платформы MAX для партнёров (business.max.ru/self). Токен хранится только на сервере и не показывается.</p>`}
    <label>${st.connected?"Заменить токен":"Токен бота"}<input type="password" name="token" autocomplete="off" placeholder="длинная строка из кабинета MAX"></label>
    <div class="row"><button class="btn small" type="submit">${st.connected?"Заменить":"Подключить бота"}</button>${st.connected?'<button class="btn ghost small" type="button" id="maxbot-off">Отключить бота</button>':""}<span class="msg" id="maxbot-m"></span></div></form>`);
   const f=$("#maxbot-f");f.oninput=()=>f.dataset.dirty="1";f.onsubmit=async e=>{e.preventDefault();const t=new FormData(f).get("token").trim();if(!t){$("#maxbot-m").textContent="Вставьте токен";return}$("#maxbot-m").textContent="Подключаем…";
-    try{await papi("/api/admin/maxbot",{token:t});delete f.dataset.dirty;toast("Бот MAX подключён");f.remove();admMax(el)}catch(err){$("#maxbot-m").textContent=err.message||errText(err)}};
-  const off=$("#maxbot-off");if(off)off.onclick=async()=>{if(off.dataset.armed!=="1"){off.dataset.armed="1";off.textContent="Точно отключить?";return}try{await apiFetch("/api/admin/maxbot",{method:"DELETE"});toast("Бот отключён");f.remove();admMax(el)}catch(err){toast(errText(err))}}}
+    try{await papi("/api/admin/maxbot",{token:t});delete f.dataset.dirty;toast("Бот MAX подключён");admMax(el)}catch(err){$("#maxbot-m").textContent=err.message||errText(err)}};
+  const off=$("#maxbot-off");if(off)off.onclick=async()=>{if(off.dataset.armed!=="1"){off.dataset.armed="1";off.textContent="Точно отключить?";return}try{await apiFetch("/api/admin/maxbot",{method:"DELETE"});toast("Бот отключён");admMax(el)}catch(err){toast(errText(err))}}}
 
 PLUS_READY=true;
 
